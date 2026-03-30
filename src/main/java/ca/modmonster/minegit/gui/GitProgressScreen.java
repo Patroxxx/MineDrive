@@ -70,6 +70,7 @@ public class GitProgressScreen extends Screen implements ProgressMonitor {
         guiGraphics.fill(barLeft, this.height - 16, barLeft + PROGRESS_BAR_WIDTH, this.height - 18, 0xFFA0A0A0);
 
         float progress = (float) currentTaskWork / currentTaskTotalWork;
+        if (progress > 1) progress = 1;
         int barPixels = (int) (PROGRESS_BAR_WIDTH * progress);
         guiGraphics.fill(barLeft, this.height - 16, barLeft + barPixels, this.height - 18, 0xFF80FF80);
     }
