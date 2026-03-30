@@ -78,7 +78,7 @@ public class CryptoManager {
             // Set file as hidden on Windows
             try {
                 Files.setAttribute(keyFilePath, "dos:hidden", true);
-            } catch (IOException ignored) {}
+            } catch (Exception ignored) {}
         } else {
             byte[] key = new byte[32];
             new SecureRandom().nextBytes(key);
