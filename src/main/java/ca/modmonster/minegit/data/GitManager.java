@@ -47,10 +47,12 @@ public class GitManager {
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
             // add all
+            progressMonitor.beginTask("Stage world to commit", 0);
             git.add()
                     .addFilepattern(".")
                     .call();
             // commit
+            progressMonitor.beginTask("Commit world state", 0);
             String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("h:mm a, MM/dd/yy"));
             git.commit()
                     .setMessage("World snapshot - " + timestamp)
