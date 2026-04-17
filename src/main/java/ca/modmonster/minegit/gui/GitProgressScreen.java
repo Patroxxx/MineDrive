@@ -1,6 +1,6 @@
 package ca.modmonster.minegit.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.FocusableTextWidget;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
@@ -55,15 +55,15 @@ public class GitProgressScreen extends Screen implements ProgressMonitor {
     }
 
     @Override
-    public void renderBackground(@NotNull GuiGraphics guiGraphics, int i, int j, float f) {
-        this.renderPanorama(guiGraphics, f);
-        this.renderBlurredBackground(guiGraphics);
-        this.renderMenuBackground(guiGraphics);
+    public void extractBackground(@NotNull GuiGraphicsExtractor guiGraphics, int i, int j, float f) {
+        this.extractPanorama(guiGraphics, f);
+        this.extractBlurredBackground(guiGraphics);
+        this.extractMenuBackground(guiGraphics);
     }
 
     @Override
-    public void render(@NotNull GuiGraphics guiGraphics, int i, int j, float f) {
-        super.render(guiGraphics, i, j, f);
+    public void extractRenderState(@NotNull GuiGraphicsExtractor guiGraphics, int i, int j, float f) {
+        super.extractRenderState(guiGraphics, i, j, f);
 
         // Render progress bar
         int barLeft = this.width / 2 - PROGRESS_BAR_WIDTH / 2;
