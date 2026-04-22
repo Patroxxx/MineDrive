@@ -9,12 +9,19 @@ import org.eclipse.jgit.lib.ProgressMonitor;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.DosFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import ca.modmonster.minegit.MineGIT;
 
@@ -127,5 +134,52 @@ public class GitManager {
 
     private static Path getPath(Minecraft minecraft, String worldId) {
         return minecraft.getLevelSource().getBaseDir().resolve(worldId);
+    }
+
+    /**
+     * Recursively make the .git folder within the provided world folder writable
+     * This prevents issues when needing to upgrade the world from <=1.21.11 to >=26.1
+     * @param minecraft Minecraft cliet reference
+     * @param worldId The world ID containing the Git repo
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public static void makeWritable(Minecraft minecraft, String worldId) {
+        Path root = getPath(minecraft, worldId).resolve(".git");
+
+        try (Stream<Path> stream = Files.walk(root)) {
+            stream.forEach(path -> {
+                File file = path.toFile();
+
+                // Windows
+                file.setReadable(true, false);
+                file.setWritable(true, false);
+                file.setExecutable(true, false);
+
+                // Windows DOS attribute (read only flag)
+                try {
+                    DosFileAttributeView dos = Files.getFileAttributeView(path, DosFileAttributeView.class);
+
+                    if (dos != null) {
+                        dos.setReadOnly(false);
+                    }
+                } catch (UnsupportedOperationException | IOException ignored) {}
+
+                // POSIX / Unix (Linux & macOS)
+                try {
+                    PosixFileAttributeView view = Files.getFileAttributeView(path, PosixFileAttributeView.class);
+                    if (view != null) {
+                        Set<PosixFilePermission> perms = Files.getPosixFilePermissions(path);
+
+                        perms.add(PosixFilePermission.OWNER_READ);
+                        perms.add(PosixFilePermission.OWNER_WRITE);
+                        perms.add(PosixFilePermission.OWNER_EXECUTE);
+
+                        Files.setPosixFilePermissions(path, perms);
+                    }
+                } catch (UnsupportedOperationException | IOException ignored) {}
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

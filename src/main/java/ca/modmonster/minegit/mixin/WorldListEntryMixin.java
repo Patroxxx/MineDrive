@@ -59,6 +59,7 @@ public abstract class WorldListEntryMixin {
         minecraft.setScreen(progressScreen);
         new Thread(() -> {
             boolean ok = GitManager.pull(minecraft, worldId, progressScreen);
+            GitManager.makeWritable(minecraft, worldId);
             if (ok) {
                 // Continue loading the world
                 minecraft.submit(() -> minecraft.createWorldOpenFlows().openWorld(getLevelSummary().getLevelId(), list::returnToScreen));
