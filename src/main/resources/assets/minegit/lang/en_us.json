@@ -33,5 +33,13 @@
   "minegit.clone.error_generic": "Something went wrong when trying to clone the world.",
   "minegit.clone.in_progress": "Cloning...",
   "minegit.sync.status.git_pull": "Pulling from GitHub...",
-  "minegit.sync.status.git_pull_error": "Something went wrong while pulling from GitHub!"
+  "minegit.sync.status.git_pull_error": "Something went wrong while pulling from GitHub!",
+  "minegit.prune.button": "☁ Prune World Commits",
+  "minegit.prune.title": "Prune World Commits",
+  "minegit.prune.description": "This will delete all but the most recent version of your world both locally and from cloud storage. You will no longer be able to restore old snapshots of your world, but it will reduce the world's file size.",
+  "minegit.prune.confirm": "Confirm",
+  "minegit.prune.cancel": "Cancel",
+  "minegit.prune.in_progress": "Pruning in progress, please wait...",
+  "minegit.prune.complete": "World pruning complete!",
+  "minegit.prune.failed": "Failed to prune world. Please see game console for details"
 }

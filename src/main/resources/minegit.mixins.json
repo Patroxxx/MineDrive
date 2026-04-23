@@ -3,10 +3,11 @@
   "package": "ca.modmonster.minegit.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "CreateWorldScreenMixin",
+    "EditWorldScreenMixin",
     "LevelSaveMixin",
     "SinglePlayerScreenMixin",
-    "WorldListEntryMixin",
-    "CreateWorldScreenMixin"
+    "WorldListEntryMixin"
   ],
   "injectors": {
     "defaultRequire": 1

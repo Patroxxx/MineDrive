@@ -1,7 +1,7 @@
 package ca.modmonster.minegit.data;
 
+import ca.modmonster.minegit.MineGIT;
 import net.minecraft.client.Minecraft;
-
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRemoteException;
@@ -22,8 +22,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
-import ca.modmonster.minegit.MineGIT;
 
 public class GitManager {
     public static boolean syncEnabled(Minecraft minecraft, String worldId) {
@@ -186,5 +184,55 @@ public class GitManager {
         try {
             Files.setAttribute(root, "dos:hidden", true);
         } catch (Exception ignored) {}
+    }
+
+    public static boolean prune(Minecraft minecraft, String worldId, ProgressMonitor progressMonitor) {
+        progressMonitor.beginTask("Opening world", 0);
+        Path worldFolder = getPath(minecraft, worldId);
+        Config config = ConfigManager.getCurrentConfig();
+        try (Git git = Git.open(worldFolder.toFile())) {
+            progressMonitor.beginTask("Creating temporary branch", 0);
+            // new branch
+            git.checkout()
+                    .setName("prune")
+                    .setOrphan(true)
+                    .setProgressMonitor(progressMonitor)
+                    .call();
+            // add all
+            progressMonitor.beginTask("Stage world to commit", 0);
+            git.add()
+                    .addFilepattern(".")
+                    .call();
+            // commit
+            progressMonitor.beginTask("Commit world state", 0);
+            String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("h:mm a, MM/dd/yy"));
+            git.commit()
+                    .setMessage("World pruning - " + timestamp)
+                    .call();
+            // delete main branch
+            git.branchDelete()
+                    .setBranchNames("main")
+                    .setForce(true)
+                    .setProgressMonitor(progressMonitor)
+                    .call();
+            progressMonitor.beginTask("Renaming temporary branch to main", 0);
+            // rename temp branch to main
+            git.branchRename()
+                    .setNewName("main")
+                    .setOldName("prune")
+                    .call();
+            // push
+            git.push()
+                    .setRemote("origin")
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
+                    .setForce(true)
+                    .setProgressMonitor(progressMonitor)
+                    .call();
+
+            return true;
+        } catch (GitAPIException | IOException e) {
+            MineGIT.LOGGER.error("Error pruning world! ", e);
+            return false;
+        }
     }
 }
