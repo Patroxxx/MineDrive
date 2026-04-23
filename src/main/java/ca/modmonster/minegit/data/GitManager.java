@@ -181,5 +181,10 @@ public class GitManager {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        // Re-hide the .git folder on Windows
+        try {
+            Files.setAttribute(root, "dos:hidden", true);
+        } catch (Exception ignored) {}
     }
 }
