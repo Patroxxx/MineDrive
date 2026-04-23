@@ -5,7 +5,8 @@
   "client": [
     "LevelSaveMixin",
     "SinglePlayerScreenMixin",
-    "WorldListEntryMixin"
+    "WorldListEntryMixin",
+    "CreateWorldScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
