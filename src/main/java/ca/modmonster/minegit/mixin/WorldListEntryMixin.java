@@ -65,7 +65,7 @@ public abstract class WorldListEntryMixin {
                 minecraft.submit(() -> minecraft.createWorldOpenFlows().openWorld(getLevelSummary().getLevelId(), list::returnToScreen));
             } else {
                 // Show toast saying "error :("
-                minecraft.setScreen(null);
+                minecraft.submit(() -> list.returnToScreen());
                 minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_pull_error"), null));
             }
         }).start();
