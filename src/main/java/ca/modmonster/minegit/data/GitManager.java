@@ -199,6 +199,13 @@ public class GitManager {
         Path worldFolder = getPath(minecraft, worldId);
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
+            // pull latest changes
+            progressMonitor.beginTask("Pulling from GitHub", 0);
+            git.pull()
+                    .setRemote("origin")
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
+                    .setProgressMonitor(progressMonitor)
+                    .call();
             progressMonitor.beginTask("Creating temporary branch", 0);
             // new branch
             git.checkout()
