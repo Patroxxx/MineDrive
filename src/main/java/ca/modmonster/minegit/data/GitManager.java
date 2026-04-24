@@ -114,6 +114,14 @@ public class GitManager {
         Config config = ConfigManager.getCurrentConfig();
         String repoUrl = String.format("https://github.com/%s/%s.git", config.username, repo);
         Path localWorldFolder = getPath(minecraft, repo.replaceFirst(Pattern.quote("minegit_"), ""));
+
+        // Add a counter at the end if world folder already exists
+        int i = 1;
+        while (localWorldFolder.toFile().exists()) {
+            localWorldFolder = getPath(minecraft, repo.replaceFirst(Pattern.quote("minegit_"), "") + "_" + i);
+            i++;
+        }
+
         try (Git ignored = Git.cloneRepository()
                 .setURI(repoUrl)
                 .setDirectory(localWorldFolder.toFile())
