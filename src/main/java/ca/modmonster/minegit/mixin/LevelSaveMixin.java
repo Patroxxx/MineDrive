@@ -49,7 +49,7 @@ public class LevelSaveMixin {
             new Thread(() -> {
                 boolean ok = GitManager.push(worldFolder, progressScreen);
                 if (!ok) {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_push_error"), null));
+                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_push.error"), null));
                 }
                 minecraft.submit(() -> minecraft.setScreen(null));
             }).start();

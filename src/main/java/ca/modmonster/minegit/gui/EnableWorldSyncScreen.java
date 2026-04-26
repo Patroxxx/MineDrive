@@ -83,13 +83,13 @@ public class EnableWorldSyncScreen extends Screen {
 
         // Create a repository on GitHub
         Config config = ConfigManager.getCurrentConfig();
-        statusWidget.setMessage(Component.translatable("minegit.sync.enable.status.create_repo"));
+        statusWidget.setMessage(Component.translatable("minegit.sync.enable.create_repo"));
         repositionElements();
         HttpResponse<String> response = NetworkManager.createRepo(config.getPat(), level.getLevelId(), level.getLevelName());
         int statusCode = response == null? -1 : response.statusCode();
         if (statusCode != 201) {
             // OOPS! ERROR!!
-            statusWidget.setMessage(Component.translatable("minegit.sync.enable.status.create_repo.error", statusCode));
+            statusWidget.setMessage(Component.translatable("minegit.sync.enable.create_repo.error", statusCode));
             openSetupButton.visible = true;
             cancelButton.active = true;
             repositionElements();
@@ -102,11 +102,11 @@ public class EnableWorldSyncScreen extends Screen {
         MineGIT.LOGGER.info("Successfully setup GitHub repo with URL: {}", repoUrl);
 
         // Git init on world save folder
-        statusWidget.setMessage(Component.translatable("minegit.sync.status.git_init"));
+        statusWidget.setMessage(Component.translatable("minegit.sync.enable.git_init"));
         repositionElements();
         boolean ok = GitManager.init(minecraft, level.getLevelId(), repoUrl);
         if (!ok) {
-            statusWidget.setMessage(Component.translatable("minegit.sync.status.git_init_error"));
+            statusWidget.setMessage(Component.translatable("minegit.sync.enable.git_init.error"));
             repositionElements();
             return;
         }

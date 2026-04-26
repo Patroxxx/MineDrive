@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import ca.modmonster.minegit.data.GitManager;
+import ca.modmonster.minegit.gui.GitErrorScreen;
 import ca.modmonster.minegit.gui.GitProgressScreen;
 
 @Mixin(WorldSelectionList.WorldListEntry.class)
@@ -44,16 +45,31 @@ public abstract class WorldListEntryMixin {
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_pull"));
         minecraft.setScreen(progressScreen);
         new Thread(() -> {
-            boolean ok = GitManager.pull(minecraft, worldId, progressScreen);
+            int status = GitManager.pull(minecraft, worldId, progressScreen);
             GitManager.makeWritable(minecraft, worldId);
-            if (ok) {
-                // Continue loading the world
-                minecraft.submit(() -> minecraft.createWorldOpenFlows().openWorld(getLevelSummary().getLevelId(), list::returnToScreen));
-            } else {
-                // Show toast saying "error :("
-                minecraft.submit(() -> list.returnToScreen());
-                minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_pull_error"), null));
+            switch (status) {
+                case 0:
+                    // Success; load world as normal
+                    doLoadWorld();
+                    break;
+                case 1:
+                    // Failed because of merge conflicts; show toast saying "error :("
+                    minecraft.submit(() -> list.returnToScreen());
+                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_pull.error"), null));
+                    break;
+                case 2:
+                    // Failed for generic reason; show unreachable screen
+                    minecraft.submit(() -> minecraft.setScreen(new GitErrorScreen(
+                            this::doLoadWorld, // continue
+                            () -> minecraft.submit(() -> list.returnToScreen()) // cancel
+                    )));
+                    break;
             }
         }).start();
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private void doLoadWorld() {
+        minecraft.submit(() -> minecraft.createWorldOpenFlows().openWorld(getLevelSummary().getLevelId(), list::returnToScreen));
     }
 }

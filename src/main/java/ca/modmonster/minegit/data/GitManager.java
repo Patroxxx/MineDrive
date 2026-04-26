@@ -44,9 +44,9 @@ public class GitManager {
      * @param minecraft Minecraft client instance
      * @param worldId ID of the world (world folder name)
      * @param progressMonitor ProgressMonitor which will be updated during the pull
-     * @return Whether the pull was successful
+     * @return 0 if successful, 1 if merge is required, 2 if generic error
      */
-    public static boolean pull(Minecraft minecraft, String worldId, ProgressMonitor progressMonitor) {
+    public static int pull(Minecraft minecraft, String worldId, ProgressMonitor progressMonitor) {
         Path worldFolder = getPath(minecraft, worldId);
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
@@ -57,7 +57,7 @@ public class GitManager {
                     .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
                     .call();
 
-            if (result.isSuccessful()) return true;
+            if (result.isSuccessful()) return 0;
 
             // pull was unsuccessful, check if it was caused by a recent prune
             progressMonitor.beginTask("Checking for pruning", 0);
@@ -66,20 +66,15 @@ public class GitManager {
             int localCommitTime;
             int remoteCommitTime = -1;
 
-            MineGIT.LOGGER.info("BIG BAD");
-
             // get time of most recent local commit
             try (RevWalk walk = new RevWalk(repo)) {
                 RevCommit commit = walk.parseCommit(head);
                 localCommitTime = commit.getCommitTime();
             }
 
-            MineGIT.LOGGER.info("LOCAL: " + localCommitTime);
-
             // get time of oldest remote commit
             BranchTrackingStatus status = BranchTrackingStatus.of(repo, repo.getBranch());
             String remoteBranch = status == null? "refs/remotes/origin/" + repo.getBranch() : status.getRemoteTrackingBranch();
-            MineGIT.LOGGER.info("THA BRACH: " + remoteBranch);
 
             // Resolve remote branch (e.g. origin/main)
             Ref remoteHead = repo.findRef(remoteBranch);
@@ -94,11 +89,9 @@ public class GitManager {
                     }
                 }
             }
-            MineGIT.LOGGER.info("RMEOTE: " + remoteCommitTime);
 
-            if (remoteCommitTime == -1) return false;
+            if (remoteCommitTime == -1) return 2;
 
-            MineGIT.LOGGER.info("DOIN DA RESET");
             if (remoteCommitTime > localCommitTime) {
                 // Prune happened, we can safely force reset to origin
                 git.reset()
@@ -106,12 +99,13 @@ public class GitManager {
                         .setRef(remoteHead.getName())
                         .setProgressMonitor(progressMonitor)
                         .call();
+                return 0;
             }
 
-            return true;
+            return 1;
         } catch (IOException | GitAPIException e) {
             MineGIT.LOGGER.error("Error pulling from repo", e);
-            return false;
+            return 2;
         }
     }
 

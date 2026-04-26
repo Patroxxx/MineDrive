@@ -111,15 +111,15 @@ public class AccountLinkScreen extends Screen {
                     updateTestButtonStatus(true);
                     break;
                 case 401:
-                    updateTestCredentialsStatus(Component.translatable("minegit.link.status.error_pat"));
+                    updateTestCredentialsStatus(Component.translatable("minegit.link.status.error.pat"));
                     updateTestButtonStatus(true);
                     break;
                 case 404:
-                    updateTestCredentialsStatus(Component.translatable("minegit.link.status.error_username"));
+                    updateTestCredentialsStatus(Component.translatable("minegit.link.status.error.username"));
                     updateTestButtonStatus(true);
                     break;
                 default:
-                    updateTestCredentialsStatus(Component.translatable("minegit.link.status.error_generic", statusCode));
+                    updateTestCredentialsStatus(Component.translatable("minegit.link.status.error.generic", statusCode));
                     updateTestButtonStatus(true);
                     break;
             }

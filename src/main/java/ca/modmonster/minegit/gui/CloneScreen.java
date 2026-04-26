@@ -104,11 +104,11 @@ public class CloneScreen extends Screen {
                         onClose();
                     }
                 } else if (result == 1) {
-                    testCredentialsStatus.setMessage(Component.translatable("minegit.clone.error_invalid_remote"));
+                    testCredentialsStatus.setMessage(Component.translatable("minegit.clone.error.invalid_remote"));
                     repositionElements();
                     updateButtonsStatus();
                 } else {
-                    testCredentialsStatus.setMessage(Component.translatable("minegit.clone.error_generic"));
+                    testCredentialsStatus.setMessage(Component.translatable("minegit.clone.error.generic"));
                     repositionElements();
                     updateButtonsStatus();
                 }
