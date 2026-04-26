@@ -1,7 +1,7 @@
 package ca.modmonster.minegit.data;
 
-import ca.modmonster.minegit.MineGIT;
 import net.minecraft.client.Minecraft;
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRemoteException;
@@ -22,6 +22,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import ca.modmonster.minegit.MineGIT;
 
 public class GitManager {
     public static boolean syncEnabled(Minecraft minecraft, String worldId) {
@@ -151,6 +153,7 @@ public class GitManager {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void makeWritable(Minecraft minecraft, String worldId) {
         Path root = getPath(minecraft, worldId).resolve(".git");
+        if (!root.toFile().exists()) return;
 
         try (Stream<Path> stream = Files.walk(root)) {
             stream.forEach(path -> {
