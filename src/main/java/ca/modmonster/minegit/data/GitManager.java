@@ -113,7 +113,12 @@ public class GitManager {
         }
     }
 
-    public static boolean push(Path worldFolder, ProgressMonitor progressMonitor) {
+    /**
+     * @param worldFolder Path to the world's folder
+     * @param progressMonitor ProgressMonitor which will be updated during the push
+     * @return 0 if successful, 1 if generic error, 2 if network error
+     */
+    public static int push(Path worldFolder, ProgressMonitor progressMonitor) {
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
             // add all
@@ -127,16 +132,19 @@ public class GitManager {
             git.commit()
                     .setMessage("World snapshot - " + timestamp)
                     .call();
-            // push (TODO: show progress)
+            // push
             git.push()
                     .setRemote("origin")
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
                     .setProgressMonitor(progressMonitor)
                     .call();
-            return true;
+            return 0;
+        } catch (TransportException e) {
+            MineGIT.LOGGER.warn("Network error when pushing to repo");
+            return 1;
         } catch (GitAPIException | IOException e) {
             MineGIT.LOGGER.error("Error with Git repo", e);
-            return false;
+            return 2;
         }
     }
 
@@ -163,7 +171,7 @@ public class GitManager {
                     .setName("origin")
                     .setUri(new URIish(repoUrl))
                     .call();
-            // push (TODO: show progress)
+            // push
             git.push()
                     .setRemote("origin")
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))

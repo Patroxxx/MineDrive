@@ -60,10 +60,10 @@ public abstract class WorldListEntryMixin {
                 case 2:
                     // Network error; show unreachable screen
                     minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
-                            Component.translatable("minegit.sync.unreachable.title"),
-                            Component.translatable("minegit.sync.unreachable.description"),
-                            Component.translatable("minegit.sync.unreachable.continue"),
-                            Component.translatable("minegit.sync.unreachable.cancel"),
+                            Component.translatable("minegit.sync.pull_unreachable.title"),
+                            Component.translatable("minegit.sync.pull_unreachable.description"),
+                            Component.translatable("minegit.sync.pull_unreachable.continue"),
+                            Component.translatable("minegit.sync.pull_unreachable.cancel"),
                             this::doLoadWorld, // continue
                             () -> minecraft.submit(() -> list.returnToScreen()) // cancel
                     )));

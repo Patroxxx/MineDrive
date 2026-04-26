@@ -45,7 +45,7 @@ public class TwoChoiceScreen extends Screen {
         buttonRowLayout.addChild(continueButton);
 
         // Cancel button
-        Button cancelButton = Button.builder(cancelMessage, button -> onClose()).build();
+        Button cancelButton = Button.builder(cancelMessage, button -> cancelCallback.run()).build();
         buttonRowLayout.addChild(cancelButton);
 
         // Add layout widgets
@@ -54,12 +54,12 @@ public class TwoChoiceScreen extends Screen {
     }
 
     @Override
-    public void onClose() {
-        cancelCallback.run();
+    protected void repositionElements() {
+        layout.arrangeElements();
     }
 
     @Override
-    protected void repositionElements() {
-        layout.arrangeElements();
+    public boolean shouldCloseOnEsc() {
+        return false;
     }
 }
