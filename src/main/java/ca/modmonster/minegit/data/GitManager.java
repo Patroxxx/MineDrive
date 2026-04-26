@@ -199,6 +199,9 @@ public class GitManager {
         Path worldFolder = getPath(minecraft, worldId);
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
+            // get current branch name
+            String mainBranch = git.getRepository().getBranch();
+
             // pull latest changes
             progressMonitor.beginTask("Pulling from GitHub", 0);
             git.pull()
@@ -226,14 +229,14 @@ public class GitManager {
                     .call();
             // delete main branch
             git.branchDelete()
-                    .setBranchNames("main")
+                    .setBranchNames(mainBranch)
                     .setForce(true)
                     .setProgressMonitor(progressMonitor)
                     .call();
             progressMonitor.beginTask("Renaming temporary branch to main", 0);
             // rename temp branch to main
             git.branchRename()
-                    .setNewName("main")
+                    .setNewName(mainBranch)
                     .setOldName("prune")
                     .call();
             // push
