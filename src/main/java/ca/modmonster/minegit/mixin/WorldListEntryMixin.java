@@ -13,12 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.stream.Stream;
-
-import ca.modmonster.minegit.MineGIT;
 import ca.modmonster.minegit.data.GitManager;
 import ca.modmonster.minegit.gui.GitProgressScreen;
 
@@ -38,15 +32,8 @@ public abstract class WorldListEntryMixin {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Inject(method = "doDeleteWorld", at = @At("HEAD"))
     private void beforeWorldDelete(CallbackInfo ci) {
-        Path gitFolder = minecraft.getLevelSource().getBaseDir().resolve(getLevelSummary().getLevelId()).resolve(".git");
-
-        // Delete .git folder
-        if (!gitFolder.toFile().exists()) return;
-        try (Stream<Path> files = Files.walk(gitFolder)){
-            files.forEach(path -> path.toFile().delete());
-        } catch (IOException e) {
-            MineGIT.LOGGER.error("Failed to delete .git folder", e);
-        }
+        // Make .git folder writable
+        GitManager.makeWritable(minecraft, getLevelSummary().getLevelId());
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
