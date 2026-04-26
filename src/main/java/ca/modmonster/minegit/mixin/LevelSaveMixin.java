@@ -20,6 +20,7 @@ import java.nio.file.Path;
 
 import ca.modmonster.minegit.MineGIT;
 import ca.modmonster.minegit.data.GitManager;
+import ca.modmonster.minegit.data.QuitState;
 import ca.modmonster.minegit.gui.GitProgressScreen;
 
 @Environment(EnvType.CLIENT)
@@ -32,6 +33,11 @@ public class LevelSaveMixin {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Inject(method = "stopServer", at = @At("TAIL"))
     private void onWorldSaved(CallbackInfo ci) {
+        if (QuitState.altQuit) {
+            QuitState.altQuit = false;
+            return;
+        }
+
         MinecraftServer server = (MinecraftServer) (Object) this;
         Path worldFolder = server.getWorldPath(LevelResource.ROOT); // get world folder
         if (!GitManager.syncEnabled(worldFolder)) return;

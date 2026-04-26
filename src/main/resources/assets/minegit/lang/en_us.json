@@ -41,5 +41,6 @@
   "minegit.prune.cancel": "Cancel",
   "minegit.prune.in_progress": "Pruning in progress, please wait...",
   "minegit.prune.complete": "World pruning complete!",
-  "minegit.prune.failed": "Failed to prune world. Please see game console for details"
+  "minegit.prune.failed": "Failed to prune world. Please see game console for details",
+  "minegit.exit_without_push": "Force quit without pushing world to GitHub"
 }
