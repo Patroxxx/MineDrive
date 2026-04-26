@@ -29,7 +29,6 @@ public abstract class WorldListEntryMixin {
     @Final
     private WorldSelectionList list;
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Inject(method = "doDeleteWorld", at = @At("HEAD"))
     private void beforeWorldDelete(CallbackInfo ci) {
         // Make .git folder writable

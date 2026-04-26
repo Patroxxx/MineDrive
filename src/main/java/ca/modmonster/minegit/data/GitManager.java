@@ -3,9 +3,14 @@ package ca.modmonster.minegit.data;
 import net.minecraft.client.Minecraft;
 
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.MergeCommand;
+import org.eclipse.jgit.api.PullResult;
+import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRemoteException;
-import org.eclipse.jgit.lib.ProgressMonitor;
+import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
@@ -34,15 +39,75 @@ public class GitManager {
         return worldFolder.resolve(".git").toFile().exists();
     }
 
+    /**
+     * Pull a world's commits from remote. Will never merge, only fast-forward
+     * @param minecraft Minecraft client instance
+     * @param worldId ID of the world (world folder name)
+     * @param progressMonitor ProgressMonitor which will be updated during the pull
+     * @return Whether the pull was successful
+     */
     public static boolean pull(Minecraft minecraft, String worldId, ProgressMonitor progressMonitor) {
         Path worldFolder = getPath(minecraft, worldId);
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
-            git.pull()
+            PullResult result = git.pull()
                     .setRemote("origin")
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
                     .setProgressMonitor(progressMonitor)
+                    .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
                     .call();
+
+            if (result.isSuccessful()) return true;
+
+            // pull was unsuccessful, check if it was caused by a recent prune
+            progressMonitor.beginTask("Checking for pruning", 0);
+            Repository repo = git.getRepository();
+            ObjectId head = repo.resolve("HEAD");
+            int localCommitTime;
+            int remoteCommitTime = -1;
+
+            MineGIT.LOGGER.info("BIG BAD");
+
+            // get time of most recent local commit
+            try (RevWalk walk = new RevWalk(repo)) {
+                RevCommit commit = walk.parseCommit(head);
+                localCommitTime = commit.getCommitTime();
+            }
+
+            MineGIT.LOGGER.info("LOCAL: " + localCommitTime);
+
+            // get time of oldest remote commit
+            BranchTrackingStatus status = BranchTrackingStatus.of(repo, repo.getBranch());
+            String remoteBranch = status == null? "refs/remotes/origin/" + repo.getBranch() : status.getRemoteTrackingBranch();
+            MineGIT.LOGGER.info("THA BRACH: " + remoteBranch);
+
+            // Resolve remote branch (e.g. origin/main)
+            Ref remoteHead = repo.findRef(remoteBranch);
+            ObjectId tip = remoteHead.getObjectId();
+
+            try (RevWalk walk = new RevWalk(repo)) {
+                walk.markStart(walk.parseCommit(tip));
+
+                for (RevCommit commit : walk) {
+                    if (commit.getParentCount() == 0) {
+                        remoteCommitTime = commit.getCommitTime();
+                    }
+                }
+            }
+            MineGIT.LOGGER.info("RMEOTE: " + remoteCommitTime);
+
+            if (remoteCommitTime == -1) return false;
+
+            MineGIT.LOGGER.info("DOIN DA RESET");
+            if (remoteCommitTime > localCommitTime) {
+                // Prune happened, we can safely force reset to origin
+                git.reset()
+                        .setMode(ResetCommand.ResetType.HARD)
+                        .setRef(remoteHead.getName())
+                        .setProgressMonitor(progressMonitor)
+                        .call();
+            }
+
             return true;
         } catch (IOException | GitAPIException e) {
             MineGIT.LOGGER.error("Error pulling from repo", e);
@@ -147,7 +212,7 @@ public class GitManager {
     /**
      * Recursively make the .git folder within the provided world folder writable
      * This prevents issues when needing to upgrade the world from <=1.21.11 to >=26.1
-     * @param minecraft Minecraft cliet reference
+     * @param minecraft Minecraft client reference
      * @param worldId The world ID containing the Git repo
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
