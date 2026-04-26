@@ -1,6 +1,5 @@
 package ca.modmonster.minegit.gui;
 
-import ca.modmonster.minegit.data.GitManager;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.StringWidget;
@@ -10,13 +9,19 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.layouts.SpacerElement;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.storage.LevelStorageSource;
+
 import org.eclipse.jgit.lib.ProgressMonitor;
+
+import ca.modmonster.minegit.data.GitManager;
+import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 
 public class PruneWorldScreen extends Screen implements ProgressMonitor {
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, 8 + 9 + 8 + 20 + 4, 60);
 
     private final Screen parent;
-    private final String worldId;
+    private final LevelStorageSource.LevelStorageAccess levelAccess;
+    private final BooleanConsumer callback;
 
     private Button confirmButton;
     private Button cancelButton;
@@ -25,10 +30,11 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     private int taskWork = 0;
     private int taskTotalWork = 0;
 
-    public PruneWorldScreen(Screen parent, String worldId) {
+    public PruneWorldScreen(Screen parent, LevelStorageSource.LevelStorageAccess levelAccess, BooleanConsumer callback) {
         super(Component.translatable("minegit.prune.title"));
         this.parent = parent;
-        this.worldId = worldId;
+        this.levelAccess = levelAccess;
+        this.callback = callback;
     }
 
     @Override
@@ -65,7 +71,9 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     private void doPrune() {
         cancelButton.active = false;
         confirmButton.active = false;
+        levelAccess.safeClose();
 
+        String worldId = levelAccess.getLevelId();
         new Thread(() -> {
             boolean ok = GitManager.prune(minecraft, worldId, this);
             if (ok) {
@@ -73,7 +81,7 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
             } else {
                 minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.failed"), null));
             }
-            minecraft.submit(this::onClose);
+            minecraft.submit(() -> this.callback.accept(true));
         }).start();
     }
 
