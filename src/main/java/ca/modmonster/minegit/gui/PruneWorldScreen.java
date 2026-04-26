@@ -22,6 +22,7 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     private Button cancelButton;
     private StringWidget statusWidget;
     private String statusText = "";
+    private int taskWork = 0;
     private int taskTotalWork = 0;
 
     public PruneWorldScreen(Screen parent, String worldId) {
@@ -94,6 +95,7 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     @Override
     public void beginTask(String title, int totalWork) {
         statusText = title;
+        taskWork = 0;
         taskTotalWork = totalWork;
         update(0);
     }
@@ -101,11 +103,12 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override
     public void update(int completed) {
+        taskWork += completed;
         minecraft.submit(() -> {
             String t = statusText;
 
             if (taskTotalWork > 0) {
-                t += " (" + completed + " / " + taskTotalWork + ")";
+                t += " (" + taskWork + " / " + taskTotalWork + ")";
             }
 
             statusWidget.setMessage(Component.literal(t));
