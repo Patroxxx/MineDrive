@@ -14,8 +14,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import ca.modmonster.minegit.data.GitManager;
-import ca.modmonster.minegit.gui.GitErrorScreen;
 import ca.modmonster.minegit.gui.GitProgressScreen;
+import ca.modmonster.minegit.gui.TwoChoiceScreen;
 
 @Mixin(WorldSelectionList.WorldListEntry.class)
 public abstract class WorldListEntryMixin {
@@ -58,8 +58,12 @@ public abstract class WorldListEntryMixin {
                     minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_pull.error"), null));
                     break;
                 case 2:
-                    // Failed for generic reason; show unreachable screen
-                    minecraft.submit(() -> minecraft.setScreen(new GitErrorScreen(
+                    // Network error; show unreachable screen
+                    minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
+                            Component.translatable("minegit.sync.unreachable.title"),
+                            Component.translatable("minegit.sync.unreachable.description"),
+                            Component.translatable("minegit.sync.unreachable.continue"),
+                            Component.translatable("minegit.sync.unreachable.cancel"),
                             this::doLoadWorld, // continue
                             () -> minecraft.submit(() -> list.returnToScreen()) // cancel
                     )));

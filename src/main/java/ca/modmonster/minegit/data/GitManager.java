@@ -8,6 +8,7 @@ import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRemoteException;
+import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
@@ -44,7 +45,7 @@ public class GitManager {
      * @param minecraft Minecraft client instance
      * @param worldId ID of the world (world folder name)
      * @param progressMonitor ProgressMonitor which will be updated during the pull
-     * @return 0 if successful, 1 if merge is required, 2 if generic error
+     * @return 0 if successful, 1 if generic error, 2 if network error
      */
     public static int pull(Minecraft minecraft, String worldId, ProgressMonitor progressMonitor) {
         Path worldFolder = getPath(minecraft, worldId);
@@ -90,7 +91,7 @@ public class GitManager {
                 }
             }
 
-            if (remoteCommitTime == -1) return 2;
+            if (remoteCommitTime == -1) return 1;
 
             if (remoteCommitTime > localCommitTime) {
                 // Prune happened, we can safely force reset to origin
@@ -103,9 +104,12 @@ public class GitManager {
             }
 
             return 1;
+        } catch (TransportException e) {
+            MineGIT.LOGGER.warn("Network error when pulling from repo");
+            return 2;
         } catch (IOException | GitAPIException e) {
             MineGIT.LOGGER.error("Error pulling from repo", e);
-            return 2;
+            return 1;
         }
     }
 
