@@ -6,9 +6,10 @@
     "CreateWorldScreenMixin",
     "EditWorldScreenMixin",
     "LevelSaveMixin",
+    "PauseScreenMixin",
+    "QuickPlayMixin",
     "SinglePlayerScreenMixin",
-    "WorldListEntryMixin",
-    "PauseScreenMixin"
+    "WorldListEntryMixin"
   ],
   "injectors": {
     "defaultRequire": 1
