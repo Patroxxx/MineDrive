@@ -349,13 +349,6 @@ public class GitManager {
             // get current branch name
             String mainBranch = git.getRepository().getBranch();
 
-            // pull latest changes
-            progressMonitor.beginTask("Pulling from GitHub", 0);
-            git.pull()
-                    .setRemote("origin")
-                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
-                    .setProgressMonitor(progressMonitor)
-                    .call();
             progressMonitor.beginTask("Creating temporary branch", 0);
             // new branch
             git.checkout()

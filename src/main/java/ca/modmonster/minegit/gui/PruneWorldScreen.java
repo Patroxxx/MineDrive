@@ -11,7 +11,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.LevelStorageSource;
 
+import org.eclipse.jgit.lib.ProgressMonitor;
+
 import ca.modmonster.minegit.data.GitManager;
+import ca.modmonster.minegit.data.SyncResult;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 
 public class PruneWorldScreen extends Screen {
@@ -46,7 +49,7 @@ public class PruneWorldScreen extends Screen {
 
         // Confirm button
         LinearLayout buttonRowLayout = columnLayout.addChild(LinearLayout.horizontal().spacing(8));
-        Button confirmButton = Button.builder(Component.translatable("minegit.prune.confirm"), button -> doPrune()).build();
+        Button confirmButton = Button.builder(Component.translatable("minegit.prune.confirm"), button -> pullThenPrune()).build();
         buttonRowLayout.addChild(confirmButton);
 
         // Cancel button
@@ -62,20 +65,52 @@ public class PruneWorldScreen extends Screen {
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void doPrune() {
-        levelAccess.safeClose();
-
+    private void doPrune(ProgressMonitor progress) {
         String worldId = levelAccess.getLevelId();
+        boolean ok = GitManager.prune(minecraft, worldId, progress);
+        if (ok) {
+            minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.complete"), null));
+        } else {
+            minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.failed"), null));
+        }
+        minecraft.submit(() -> this.callback.accept(true));
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private void pullThenPrune() {
+        levelAccess.safeClose();
+        String worldId = levelAccess.getLevelId();
+
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.prune.in_progress"));
         minecraft.setScreen(progressScreen);
         new Thread(() -> {
-            boolean ok = GitManager.prune(minecraft, worldId, progressScreen);
-            if (ok) {
-                minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.complete"), null));
-            } else {
-                minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.failed"), null));
+            SyncResult status = GitManager.pull(GitManager.getPath(minecraft, worldId), progressScreen);
+            GitManager.makeWritable(minecraft, worldId);
+            switch (status) {
+                case SUCCESS:
+                    // Success; load world as normal
+                    doPrune(progressScreen);
+                    break;
+                case FAIL_GENERIC:
+                    // Generic error; show option to keep local or cloud
+                    minecraft.submit(() -> minecraft.setScreen(new GitConflictScreen(
+                            () -> doPrune(progressScreen),
+                            this::onClose,
+                            GitManager.getPath(minecraft, worldId)
+                    )));
+                    break;
+                case FAIL_NETWORK:
+                    // Network error; show unreachable screen
+                    minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
+                            Component.translatable("minegit.sync.pull_unreachable.title"),
+                            Component.translatable("minegit.sync.pull_unreachable.description"),
+                            Component.translatable("minegit.sync.pull_unreachable.continue"),
+                            Component.translatable("minegit.sync.pull_unreachable.cancel"),
+                            () -> doPrune(progressScreen),
+                            this::onClose
+                    )));
+                    break;
             }
-            minecraft.submit(() -> this.callback.accept(true));
         }).start();
     }
 
