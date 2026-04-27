@@ -1,7 +1,7 @@
 package ca.modmonster.minegit.data;
 
+import ca.modmonster.minegit.MineGIT;
 import net.minecraft.client.Minecraft;
-
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.MergeCommand;
 import org.eclipse.jgit.api.PullResult;
@@ -32,8 +32,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
-
-import ca.modmonster.minegit.MineGIT;
 
 public class GitManager {
     public static boolean syncEnabled(Minecraft minecraft, String worldId) {
@@ -256,7 +254,8 @@ public class GitManager {
         }
     }
 
-    public static int cloneRepo(Minecraft minecraft, String repo) {
+    public static int cloneRepo(Minecraft minecraft, String repo, ProgressMonitor progressMonitor) {
+        progressMonitor.beginTask("Starting world clone", 0);
         Config config = ConfigManager.getCurrentConfig();
         String repoUrl = String.format("https://github.com/%s/%s.git", config.username, repo);
         Path localWorldFolder = getPath(minecraft, repo.replaceFirst(Pattern.quote("minegit_"), ""));
@@ -272,7 +271,7 @@ public class GitManager {
                 .setURI(repoUrl)
                 .setDirectory(localWorldFolder.toFile())
                 .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
-                .setDepth(1)
+                .setProgressMonitor(progressMonitor)
                 .call()) {
             return 0;
         } catch (InvalidRemoteException e) {

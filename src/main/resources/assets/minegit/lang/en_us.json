@@ -45,7 +45,7 @@
   "minegit.clone.success": "Successfully cloned the world from GitHub!",
   "minegit.clone.error.invalid_remote": "The world you are looking for doesn't exist!",
   "minegit.clone.error.generic": "Something went wrong when trying to clone the world.",
-  "minegit.clone.in_progress": "Cloning...",
+  "minegit.clone.in_progress": "Cloning world...",
   "minegit.prune.button": "☁ Prune World Commits",
   "minegit.prune.title": "Prune World Commits",
   "minegit.prune.description": "This will delete all but the most recent version of your world both locally and from cloud storage. You will no longer be able to restore old snapshots of your world, but it will reduce the world's file size.",

@@ -1,5 +1,6 @@
 package ca.modmonster.minegit.gui;
 
+import ca.modmonster.minegit.data.GitManager;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
@@ -7,8 +8,6 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-
-import ca.modmonster.minegit.data.GitManager;
 
 public class CloneScreen extends Screen {
     private static final Component REPO_LABEL = Component.translatable("minegit.clone.repo");
@@ -18,16 +17,9 @@ public class CloneScreen extends Screen {
     private final Screen parent;
     private final Runnable closeCallback;
     private final Runnable cloneSuccessCallback;
-    private Button backButton;
     private EditBox repoEdit;
     private Button testCredentialsButton;
     private ImageWidget ralspinWidget;
-    private StringWidget testCredentialsStatus;
-    private boolean requestInProgress = false;
-
-    public CloneScreen(Screen parent) {
-        this(parent, null);
-    }
 
     public CloneScreen(Screen parent, Runnable closeCallback) {
         this(parent, closeCallback, null);
@@ -61,19 +53,15 @@ public class CloneScreen extends Screen {
         testCredentialsButton = Button.builder(Component.translatable("minegit.clone.confirm"), button -> doClone()).size(200, 20).build();
         columnLayout.addChild(testCredentialsButton);
 
-        // Clone status
-        testCredentialsStatus = new StringWidget(Component.empty(), font);
-        columnLayout.addChild(testCredentialsStatus);
-
         // Add layout widgets
         this.layout.visitWidgets(this::addRenderableWidget);
         this.layout.arrangeElements();
 
         // Back button
-        backButton = Button.builder(Component.literal("←"), button -> onClose())
-            .tooltip(Tooltip.create(Component.translatable("minegit.clone.back")))
-            .bounds(6, 6, 20, 20)
-            .build();
+        Button backButton = Button.builder(Component.literal("←"), button -> onClose())
+                .tooltip(Tooltip.create(Component.translatable("minegit.clone.back")))
+                .bounds(6, 6, 20, 20)
+                .build();
         addRenderableWidget(backButton);
 
         // Ralsei go spinny
@@ -87,13 +75,10 @@ public class CloneScreen extends Screen {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private void doClone() {
-        requestInProgress = true;
-        testCredentialsStatus.setMessage(Component.translatable("minegit.clone.in_progress"));
-        repositionElements();
-        updateButtonsStatus();
+        GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.clone.in_progress"));
+        minecraft.setScreen(progressScreen);
         new Thread(() -> {
-            int result = GitManager.cloneRepo(minecraft, repoEdit.getValue());
-            requestInProgress = false;
+            int result = GitManager.cloneRepo(minecraft, repoEdit.getValue(), progressScreen);
 
             minecraft.submit(() -> {
                 if (result == 0) {
@@ -104,11 +89,13 @@ public class CloneScreen extends Screen {
                         onClose();
                     }
                 } else if (result == 1) {
-                    testCredentialsStatus.setMessage(Component.translatable("minegit.clone.error.invalid_remote"));
+                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.clone.error.invalid_remote"), null));
+                    minecraft.setScreen(this);
                     repositionElements();
                     updateButtonsStatus();
                 } else {
-                    testCredentialsStatus.setMessage(Component.translatable("minegit.clone.error.generic"));
+                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.clone.error.generic"), null));
+                    minecraft.setScreen(this);
                     repositionElements();
                     updateButtonsStatus();
                 }
@@ -117,8 +104,7 @@ public class CloneScreen extends Screen {
     }
 
     private void updateButtonsStatus() {
-        backButton.active = !requestInProgress;
-        testCredentialsButton.active = !requestInProgress && !repoEdit.getValue().isBlank();
+        testCredentialsButton.active = !repoEdit.getValue().isBlank();
     }
 
     @Override
@@ -136,10 +122,5 @@ public class CloneScreen extends Screen {
     protected void repositionElements() {
         layout.arrangeElements();
         ralspinWidget.setPosition(width - 60, height - 80);
-    }
-
-    @Override
-    public boolean shouldCloseOnEsc() {
-        return !requestInProgress;
     }
 }
