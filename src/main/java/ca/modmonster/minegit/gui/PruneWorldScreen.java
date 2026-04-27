@@ -23,6 +23,7 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     private final LevelStorageSource.LevelStorageAccess levelAccess;
     private final BooleanConsumer callback;
 
+    private MultiLineTextWidget descriptionWidget;
     private Button confirmButton;
     private Button cancelButton;
     private StringWidget statusWidget;
@@ -47,7 +48,8 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
         layout.addTitleHeader(this.title, this.font);
 
         // Confirmation message
-        columnLayout.addChild(new MultiLineTextWidget(Component.translatable("minegit.prune.description"), this.font).setMaxWidth(this.width - 50));
+        descriptionWidget = new MultiLineTextWidget(Component.translatable("minegit.prune.description"), this.font).setMaxWidth(this.width - 50);
+        columnLayout.addChild(descriptionWidget);
         columnLayout.addChild(new SpacerElement(200, 20));
 
         // Confirm button
@@ -87,6 +89,7 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
 
     @Override
     protected void repositionElements() {
+        if (descriptionWidget != null) descriptionWidget.setMaxWidth(this.width - 50);
         layout.arrangeElements();
     }
 

@@ -3,7 +3,6 @@ package ca.modmonster.minegit.mixin;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -21,6 +20,8 @@ import java.nio.file.Path;
 import ca.modmonster.minegit.MineGIT;
 import ca.modmonster.minegit.data.GitManager;
 import ca.modmonster.minegit.data.QuitState;
+import ca.modmonster.minegit.data.SyncResult;
+import ca.modmonster.minegit.gui.GitConflictScreen;
 import ca.modmonster.minegit.gui.GitProgressScreen;
 import ca.modmonster.minegit.gui.TwoChoiceScreen;
 
@@ -52,26 +53,30 @@ public class LevelSaveMixin {
             GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_push"));
             minecraft.setScreen(progressScreen);
             new Thread(() -> {
-                int status = GitManager.push(worldFolder, progressScreen);
+                SyncResult status = GitManager.push(worldFolder, progressScreen);
                 switch (status) {
-                    case 0:
+                    case SUCCESS:
                         // Success; quit as normal
                         minecraft.submit(() -> minecraft.setScreen(null));
                         break;
-                    case 1:
+                    case FAIL_GENERIC:
+                        // Generic error; show option to keep local or cloud
+                        minecraft.submit(() -> minecraft.setScreen(new GitConflictScreen(
+                                () -> minecraft.setScreen(null),
+                                null,
+                                worldFolder
+                        )));
+                        break;
+                    case FAIL_NETWORK:
+                        // Network error; show unreachable screen
                         minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
                                 Component.translatable("minegit.sync.push_unreachable.title"),
                                 Component.translatable("minegit.sync.push_unreachable.description"),
                                 Component.translatable("minegit.sync.push_unreachable.retry"),
                                 Component.translatable("minegit.sync.push_unreachable.exit"),
                                 () -> doWorldSave(worldFolder),
-                                () -> minecraft.submit(() -> minecraft.setScreen(null))
+                                () -> minecraft.setScreen(null)
                         )));
-                        break;
-                    case 2:
-                        // Generic error; show toast (temporarily until we fix :3)
-                        minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_push.error"), null));
-                        minecraft.submit(() -> minecraft.setScreen(null));
                         break;
                 }
             }).start();

@@ -12,6 +12,8 @@ import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.transport.PushResult;
+import org.eclipse.jgit.transport.RemoteRefUpdate;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
@@ -23,6 +25,8 @@ import java.nio.file.Path;
 import java.nio.file.attribute.DosFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
@@ -42,13 +46,11 @@ public class GitManager {
 
     /**
      * Pull a world's commits from remote. Will never merge, only fast-forward
-     * @param minecraft Minecraft client instance
-     * @param worldId ID of the world (world folder name)
+     * @param worldFolder Path to the world's folder
      * @param progressMonitor ProgressMonitor which will be updated during the pull
-     * @return 0 if successful, 1 if generic error, 2 if network error
+     * @return SyncResult representing if the pull was successful or why it failed
      */
-    public static int pull(Minecraft minecraft, String worldId, ProgressMonitor progressMonitor) {
-        Path worldFolder = getPath(minecraft, worldId);
+    public static SyncResult pull(Path worldFolder, ProgressMonitor progressMonitor) {
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
             PullResult result = git.pull()
@@ -58,7 +60,7 @@ public class GitManager {
                     .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
                     .call();
 
-            if (result.isSuccessful()) return 0;
+            if (result.isSuccessful()) return SyncResult.SUCCESS;
 
             // pull was unsuccessful, check if it was caused by a recent prune
             progressMonitor.beginTask("Checking for pruning", 0);
@@ -91,7 +93,7 @@ public class GitManager {
                 }
             }
 
-            if (remoteCommitTime == -1) return 1;
+            if (remoteCommitTime == -1) return SyncResult.FAIL_GENERIC;
 
             if (remoteCommitTime > localCommitTime) {
                 // Prune happened, we can safely force reset to origin
@@ -100,25 +102,60 @@ public class GitManager {
                         .setRef(remoteHead.getName())
                         .setProgressMonitor(progressMonitor)
                         .call();
-                return 0;
+                return SyncResult.SUCCESS;
             }
 
-            return 1;
+            return SyncResult.FAIL_GENERIC;
         } catch (TransportException e) {
             MineGIT.LOGGER.warn("Network error when pulling from repo");
-            return 2;
+            return SyncResult.FAIL_NETWORK;
         } catch (IOException | GitAPIException e) {
             MineGIT.LOGGER.error("Error pulling from repo", e);
-            return 1;
+            return SyncResult.FAIL_GENERIC;
+        }
+    }
+
+    /**
+     * Forcibly pull a world's commits from remote, overwriting the local version.
+     * @param worldFolder Path to the world's folder
+     * @param progressMonitor ProgressMonitor which will be updated during the pull
+     * @return SyncResult representing if the pull was successful or why it failed
+     */
+    public static SyncResult forcePull(Path worldFolder, ProgressMonitor progressMonitor) {
+        Config config = ConfigManager.getCurrentConfig();
+        try (Git git = Git.open(worldFolder.toFile())) {
+            git.fetch()
+                    .setRemote("origin")
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
+                    .setProgressMonitor(progressMonitor)
+                    .call();
+
+            Repository repo = git.getRepository();
+            BranchTrackingStatus status = BranchTrackingStatus.of(repo, repo.getBranch());
+            String remoteBranch = status == null? "refs/remotes/origin/" + repo.getBranch() : status.getRemoteTrackingBranch();
+            Ref remoteHead = repo.findRef(remoteBranch);
+            git.reset()
+                    .setMode(ResetCommand.ResetType.HARD)
+                    .setRef(remoteHead.getName())
+                    .setProgressMonitor(progressMonitor)
+                    .call();
+
+            return SyncResult.SUCCESS;
+        } catch (TransportException e) {
+            MineGIT.LOGGER.warn("Network error when pulling from repo");
+            return SyncResult.FAIL_NETWORK;
+        } catch (IOException | GitAPIException e) {
+            MineGIT.LOGGER.error("Error pulling from repo", e);
+            return SyncResult.FAIL_GENERIC;
         }
     }
 
     /**
      * @param worldFolder Path to the world's folder
      * @param progressMonitor ProgressMonitor which will be updated during the push
-     * @return 0 if successful, 1 if generic error, 2 if network error
+     * @return SyncResult representing if the push was successful or why it failed
      */
-    public static int push(Path worldFolder, ProgressMonitor progressMonitor) {
+    public static SyncResult push(Path worldFolder, ProgressMonitor progressMonitor) {
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.open(worldFolder.toFile())) {
             // add all
@@ -133,18 +170,54 @@ public class GitManager {
                     .setMessage("World snapshot - " + timestamp)
                     .call();
             // push
-            git.push()
+            Iterable<PushResult> results = git.push()
                     .setRemote("origin")
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
                     .setProgressMonitor(progressMonitor)
                     .call();
-            return 0;
+
+            // Check if push went OK
+            for (PushResult result : results) {
+                for (RemoteRefUpdate update : result.getRemoteUpdates()) {
+                    RemoteRefUpdate.Status status = update.getStatus();
+                    if (status != RemoteRefUpdate.Status.OK && status != RemoteRefUpdate.Status.UP_TO_DATE) {
+                        return SyncResult.FAIL_GENERIC;
+                    }
+                }
+            }
+
+            return SyncResult.SUCCESS;
         } catch (TransportException e) {
             MineGIT.LOGGER.warn("Network error when pushing to repo");
-            return 1;
+            return SyncResult.FAIL_NETWORK;
         } catch (GitAPIException | IOException e) {
             MineGIT.LOGGER.error("Error with Git repo", e);
-            return 2;
+            return SyncResult.FAIL_GENERIC;
+        }
+    }
+
+    /**
+     * @param worldFolder Path to the world's folder
+     * @param progressMonitor ProgressMonitor which will be updated during the push
+     * @return SyncResult representing if the push was successful or why it failed
+     */
+    public static SyncResult forcePush(Path worldFolder, ProgressMonitor progressMonitor) {
+        Config config = ConfigManager.getCurrentConfig();
+        try (Git git = Git.open(worldFolder.toFile())) {
+            // push
+            git.push()
+                    .setRemote("origin")
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
+                    .setProgressMonitor(progressMonitor)
+                    .setForce(true)
+                    .call();
+            return SyncResult.SUCCESS;
+        } catch (TransportException e) {
+            MineGIT.LOGGER.warn("Network error when pushing to repo");
+            return SyncResult.FAIL_NETWORK;
+        } catch (GitAPIException | IOException e) {
+            MineGIT.LOGGER.error("Error with Git repo", e);
+            return SyncResult.FAIL_GENERIC;
         }
     }
 
@@ -211,7 +284,7 @@ public class GitManager {
         }
     }
 
-    private static Path getPath(Minecraft minecraft, String worldId) {
+    public static Path getPath(Minecraft minecraft, String worldId) {
         return minecraft.getLevelSource().getBaseDir().resolve(worldId);
     }
 
@@ -326,5 +399,45 @@ public class GitManager {
             MineGIT.LOGGER.error("Error pruning world! ", e);
             return false;
         }
+    }
+
+    // format like Apr 26, 2026 at 7:38 PM
+
+    public static String getLatestLocalCommitDate(Path worldFolder) {
+        try (Git git = Git.open(worldFolder.toFile())) {
+            Repository repo = git.getRepository();
+            ObjectId head = repo.resolve("HEAD");
+
+            try (RevWalk walk = new RevWalk(repo)) {
+                RevCommit commit = walk.parseCommit(head);
+                return formatCommitTimestamp(commit.getCommitTime());
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String getLatestRemoteCommitDate(Path worldFolder) {
+        try (Git git = Git.open(worldFolder.toFile())) {
+            Repository repo = git.getRepository();
+            ObjectId remoteHead = repo.resolve("refs/remotes/origin/" + repo.getBranch());
+
+            if (remoteHead == null) {
+                return "Remote not found :(";
+            }
+
+            try (RevWalk walk = new RevWalk(repo)) {
+                RevCommit commit = walk.parseCommit(remoteHead);
+                return formatCommitTimestamp(commit.getCommitTime());
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String formatCommitTimestamp(int timestamp) {
+        Instant instant = Instant.ofEpochSecond(timestamp);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a").withZone(ZoneId.systemDefault());
+        return formatter.format(instant);
     }
 }

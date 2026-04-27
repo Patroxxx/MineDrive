@@ -26,6 +26,8 @@ public class TwoChoiceScreen extends Screen {
     private final Runnable continueCallback;
     private final Runnable cancelCallback;
 
+    private MultiLineTextWidget descriptionWidget;
+
     @Override
     protected void init() {
         // Column layout
@@ -36,7 +38,8 @@ public class TwoChoiceScreen extends Screen {
         layout.addTitleHeader(this.title, this.font);
 
         // Confirmation message
-        columnLayout.addChild(new MultiLineTextWidget(description, this.font).setMaxWidth(this.width - 50));
+        descriptionWidget = new MultiLineTextWidget(description, this.font).setMaxWidth(this.width - 50);
+        columnLayout.addChild(descriptionWidget);
         columnLayout.addChild(new SpacerElement(200, 20));
 
         // Continue button
@@ -55,6 +58,7 @@ public class TwoChoiceScreen extends Screen {
 
     @Override
     protected void repositionElements() {
+        if (descriptionWidget != null) descriptionWidget.setMaxWidth(this.width - 50);
         layout.arrangeElements();
     }
 

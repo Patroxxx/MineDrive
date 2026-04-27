@@ -1,7 +1,6 @@
 package ca.modmonster.minegit.mixin;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.LevelSummary;
@@ -14,6 +13,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import ca.modmonster.minegit.data.GitManager;
+import ca.modmonster.minegit.data.SyncResult;
+import ca.modmonster.minegit.gui.GitConflictScreen;
 import ca.modmonster.minegit.gui.GitProgressScreen;
 import ca.modmonster.minegit.gui.TwoChoiceScreen;
 
@@ -45,19 +46,22 @@ public abstract class WorldListEntryMixin {
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_pull"));
         minecraft.setScreen(progressScreen);
         new Thread(() -> {
-            int status = GitManager.pull(minecraft, worldId, progressScreen);
+            SyncResult status = GitManager.pull(GitManager.getPath(minecraft, worldId), progressScreen);
             GitManager.makeWritable(minecraft, worldId);
             switch (status) {
-                case 0:
+                case SUCCESS:
                     // Success; load world as normal
                     doLoadWorld();
                     break;
-                case 1:
-                    // Failed because of merge conflicts; show toast saying "error :("
-                    minecraft.submit(() -> list.returnToScreen());
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.status.git_pull.error"), null));
+                case FAIL_GENERIC:
+                    // Generic error; show option to keep local or cloud
+                    minecraft.submit(() -> minecraft.setScreen(new GitConflictScreen(
+                            this::doLoadWorld,
+                            () -> list.returnToScreen(),
+                            GitManager.getPath(minecraft, worldId)
+                    )));
                     break;
-                case 2:
+                case FAIL_NETWORK:
                     // Network error; show unreachable screen
                     minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
                             Component.translatable("minegit.sync.pull_unreachable.title"),
@@ -65,7 +69,7 @@ public abstract class WorldListEntryMixin {
                             Component.translatable("minegit.sync.pull_unreachable.continue"),
                             Component.translatable("minegit.sync.pull_unreachable.cancel"),
                             this::doLoadWorld, // continue
-                            () -> minecraft.submit(() -> list.returnToScreen()) // cancel
+                            () -> list.returnToScreen() // cancel
                     )));
                     break;
             }
