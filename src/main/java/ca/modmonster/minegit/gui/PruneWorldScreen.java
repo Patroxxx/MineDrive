@@ -11,12 +11,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.storage.LevelStorageSource;
 
-import org.eclipse.jgit.lib.ProgressMonitor;
-
 import ca.modmonster.minegit.data.GitManager;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 
-public class PruneWorldScreen extends Screen implements ProgressMonitor {
+public class PruneWorldScreen extends Screen {
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, 8 + 9 + 8 + 20 + 4, 60);
 
     private final Screen parent;
@@ -24,12 +22,6 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     private final BooleanConsumer callback;
 
     private MultiLineTextWidget descriptionWidget;
-    private Button confirmButton;
-    private Button cancelButton;
-    private StringWidget statusWidget;
-    private String statusText = "";
-    private int taskWork = 0;
-    private int taskTotalWork = 0;
 
     public PruneWorldScreen(Screen parent, LevelStorageSource.LevelStorageAccess levelAccess, BooleanConsumer callback) {
         super(Component.translatable("minegit.prune.title"));
@@ -54,14 +46,14 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
 
         // Confirm button
         LinearLayout buttonRowLayout = columnLayout.addChild(LinearLayout.horizontal().spacing(8));
-        confirmButton = Button.builder(Component.translatable("minegit.prune.confirm"), button -> doPrune()).build();
+        Button confirmButton = Button.builder(Component.translatable("minegit.prune.confirm"), button -> doPrune()).build();
         buttonRowLayout.addChild(confirmButton);
 
         // Cancel button
-        cancelButton = Button.builder(Component.translatable("minegit.prune.cancel"), button -> onClose()).build();
+        Button cancelButton = Button.builder(Component.translatable("minegit.prune.cancel"), button -> onClose()).build();
         buttonRowLayout.addChild(cancelButton);
 
-        statusWidget = new StringWidget(Component.empty(), this.font);
+        StringWidget statusWidget = new StringWidget(Component.empty(), this.font);
         columnLayout.addChild(statusWidget);
 
         // Add layout widgets
@@ -71,13 +63,13 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private void doPrune() {
-        cancelButton.active = false;
-        confirmButton.active = false;
         levelAccess.safeClose();
 
         String worldId = levelAccess.getLevelId();
+        GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.prune.in_progress"));
+        minecraft.setScreen(progressScreen);
         new Thread(() -> {
-            boolean ok = GitManager.prune(minecraft, worldId, this);
+            boolean ok = GitManager.prune(minecraft, worldId, progressScreen);
             if (ok) {
                 minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.complete"), null));
             } else {
@@ -96,49 +88,5 @@ public class PruneWorldScreen extends Screen implements ProgressMonitor {
     @Override
     public void onClose() {
         minecraft.setScreen(parent);
-    }
-
-    @Override
-    public void start(int totalTasks) {
-
-    }
-
-    @Override
-    public void beginTask(String title, int totalWork) {
-        statusText = title;
-        taskWork = 0;
-        taskTotalWork = totalWork;
-        update(0);
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    @Override
-    public void update(int completed) {
-        taskWork += completed;
-        minecraft.submit(() -> {
-            String t = statusText;
-
-            if (taskTotalWork > 0) {
-                t += " (" + taskWork + " / " + taskTotalWork + ")";
-            }
-
-            statusWidget.setMessage(Component.literal(t));
-            repositionElements();
-        });
-    }
-
-    @Override
-    public void endTask() {
-
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return false;
-    }
-
-    @Override
-    public void showDuration(boolean enabled) {
-
     }
 }
