@@ -107,5 +107,6 @@ public class SinglePlayerScreenMixin extends Screen {
         }
 
         worldSyncButtonState.apply(worldSyncButton);
+        if (cloneButton != null) cloneButton.active = worldSyncButtonState != WorldSyncButtonState.SETUP;
     }
 }
