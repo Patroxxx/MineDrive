@@ -1,7 +1,11 @@
 package ca.modmonster.minegit.gui;
 
+import ca.modmonster.minegit.MineGIT;
+import ca.modmonster.minegit.data.Config;
+import ca.modmonster.minegit.data.ConfigManager;
+import ca.modmonster.minegit.data.GitManager;
+import ca.modmonster.minegit.data.NetworkManager;
 import com.google.gson.JsonParser;
-
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.toasts.SystemToast;
@@ -13,12 +17,6 @@ import net.minecraft.world.level.storage.LevelSummary;
 
 import java.net.http.HttpResponse;
 
-import ca.modmonster.minegit.MineGIT;
-import ca.modmonster.minegit.data.Config;
-import ca.modmonster.minegit.data.ConfigManager;
-import ca.modmonster.minegit.data.GitManager;
-import ca.modmonster.minegit.data.NetworkManager;
-
 public class EnableWorldSyncScreen extends Screen {
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, 8 + 9 + 8 + 20 + 4, 60);
 
@@ -29,11 +27,6 @@ public class EnableWorldSyncScreen extends Screen {
     private Button confirmButton;
     private Button cancelButton;
     private Button openSetupButton;
-    private StringWidget statusWidget;
-
-    public EnableWorldSyncScreen(Screen parent, LevelSummary level) {
-        this(parent, level, null);
-    }
 
     public EnableWorldSyncScreen(Screen parent, LevelSummary level, Runnable closeCallback) {
         super(Component.translatable("minegit.sync.enable"));
@@ -64,10 +57,6 @@ public class EnableWorldSyncScreen extends Screen {
         cancelButton = Button.builder(Component.translatable("minegit.sync.enable.confirm.cancel"), button -> onClose()).build();
         buttonRowLayout.addChild(cancelButton);
 
-        // Status
-        statusWidget = new StringWidget(Component.empty(), font);
-        columnLayout.addChild(statusWidget);
-
         openSetupButton = Button.builder(Component.translatable("minegit.link.setup.open"), button -> minecraft.setScreen(new AccountLinkScreen(this.parent))).build();
         openSetupButton.visible = false;
         columnLayout.addChild(openSetupButton);
@@ -77,42 +66,50 @@ public class EnableWorldSyncScreen extends Screen {
         this.layout.arrangeElements();
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void setupSync() {
         confirmButton.active = false;
         cancelButton.active = false;
 
-        // Create a repository on GitHub
-        Config config = ConfigManager.getCurrentConfig();
-        statusWidget.setMessage(Component.translatable("minegit.sync.enable.create_repo"));
-        repositionElements();
-        HttpResponse<String> response = NetworkManager.createRepo(config.getPat(), level.getLevelId(), level.getLevelName());
-        int statusCode = response == null? -1 : response.statusCode();
-        if (statusCode != 201) {
-            // OOPS! ERROR!!
-            statusWidget.setMessage(Component.translatable("minegit.sync.enable.create_repo.error", statusCode));
-            openSetupButton.visible = true;
-            cancelButton.active = true;
-            repositionElements();
+        GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.enable.working"));
+        minecraft.setScreen(progressScreen);
+        new Thread(() -> {
+            // Create a repository on GitHub
+            Config config = ConfigManager.getCurrentConfig();
+            progressScreen.beginTask("Create GitHub repository", 0);
+            HttpResponse<String> response = NetworkManager.createRepo(config.getPat(), level.getLevelId(), level.getLevelName());
+            int statusCode = response == null? -1 : response.statusCode();
+            if (statusCode != 201) {
+                // OOPS! ERROR!!
+                minecraft.submit(() -> {
+                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.create_repo.error", statusCode), null));
+                    openSetupButton.visible = true;
+                    cancelButton.active = true;
 
-            if (response != null) MineGIT.LOGGER.error(response.body());
-            return;
-        }
+                    if (response != null) MineGIT.LOGGER.error(response.body());
+                    minecraft.setScreen(this);
+                });
+                return;
+            }
 
-        String repoUrl = JsonParser.parseString(response.body()).getAsJsonObject().get("clone_url").getAsString();
-        MineGIT.LOGGER.info("Successfully setup GitHub repo with URL: {}", repoUrl);
+            String repoUrl = JsonParser.parseString(response.body()).getAsJsonObject().get("clone_url").getAsString();
+            MineGIT.LOGGER.info("Successfully setup GitHub repo with URL: {}", repoUrl);
 
-        // Git init on world save folder
-        statusWidget.setMessage(Component.translatable("minegit.sync.enable.git_init"));
-        repositionElements();
-        boolean ok = GitManager.init(minecraft, level.getLevelId(), repoUrl);
-        if (!ok) {
-            statusWidget.setMessage(Component.translatable("minegit.sync.enable.git_init.error"));
-            repositionElements();
-            return;
-        }
+            // Git init on world save folder
+            progressScreen.beginTask("Create Git repo", 0);
+            boolean ok = GitManager.init(minecraft, level.getLevelId(), repoUrl, progressScreen);
+            if (!ok) {
+                minecraft.submit(() -> {
+                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.git_init.error"), null));
+                    minecraft.setScreen(this);
+                    cancelButton.active = true;
+                });
+                return;
+            }
 
-        minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.complete"), null));
-        onClose();
+            minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.complete"), null));
+            minecraft.submit(this::onClose);
+        }).start();
     }
 
     @Override
@@ -124,10 +121,5 @@ public class EnableWorldSyncScreen extends Screen {
     @Override
     protected void repositionElements() {
         layout.arrangeElements();
-    }
-
-    @Override
-    public boolean shouldCloseOnEsc() {
-        return cancelButton.active;
     }
 }

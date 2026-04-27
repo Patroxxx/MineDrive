@@ -219,15 +219,17 @@ public class GitManager {
         }
     }
 
-    public static boolean init(Minecraft minecraft, String worldId, String repoUrl) {
+    public static boolean init(Minecraft minecraft, String worldId, String repoUrl, ProgressMonitor progressMonitor) {
         Path worldFolder = getPath(minecraft, worldId);
         Config config = ConfigManager.getCurrentConfig();
         try (Git git = Git.init().setDirectory(worldFolder.toFile()).call()) {
+            progressMonitor.beginTask("Stage world to commit", 0);
             // add all
             git.add()
                     .addFilepattern(".")
                     .call();
             // commit
+            progressMonitor.beginTask("Commit world state", 0);
             String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("h:mm a, MM/dd/yy"));
             git.commit()
                     .setMessage("Initial world snapshot - " + timestamp)
@@ -246,6 +248,7 @@ public class GitManager {
             git.push()
                     .setRemote("origin")
                     .setCredentialsProvider(new UsernamePasswordCredentialsProvider(config.username, config.getPat()))
+                    .setProgressMonitor(progressMonitor)
                     .call();
             return true;
         } catch (GitAPIException | URISyntaxException e) {
