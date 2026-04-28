@@ -29,7 +29,7 @@ public class EnableWorldSyncScreen extends Screen {
     private Button openSetupButton;
 
     public EnableWorldSyncScreen(Screen parent, LevelSummary level, Runnable closeCallback) {
-        super(Component.translatable("minegit.sync.enable"));
+        super(Component.translatable("minegit.sync.enable.title"));
         this.parent = parent;
         this.level = level;
         this.closeCallback = closeCallback;
