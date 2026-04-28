@@ -20,6 +20,7 @@ public class CloneScreen extends Screen {
     private EditBox repoEdit;
     private Button testCredentialsButton;
     private ImageWidget ralspinWidget;
+    private Button configureButton;
 
     public CloneScreen(Screen parent, Runnable closeCallback) {
         this(parent, closeCallback, null);
@@ -55,7 +56,6 @@ public class CloneScreen extends Screen {
 
         // Add layout widgets
         this.layout.visitWidgets(this::addRenderableWidget);
-        this.layout.arrangeElements();
 
         // Back button
         Button backButton = Button.builder(Component.literal("←"), button -> onClose())
@@ -64,6 +64,13 @@ public class CloneScreen extends Screen {
                 .build();
         addRenderableWidget(backButton);
 
+        // Configure button
+        configureButton = Button.builder(Component.literal("☁"), button -> minecraft.setScreen(new AccountLinkScreen(this)))
+                .tooltip(Tooltip.create(Component.translatable("minegit.link.setup.open")))
+                .bounds(6, width - 26, 20, 20)
+                .build();
+        addRenderableWidget(configureButton);
+
         // Ralsei go spinny
         ralspinWidget = ImageWidget.sprite(42, 80, RALSPIN);
         ralspinWidget.setPosition(width - 60, height - 80);
@@ -71,6 +78,7 @@ public class CloneScreen extends Screen {
         addRenderableWidget(ralspinWidget);
 
         updateButtonsStatus();
+        repositionElements();
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -122,5 +130,6 @@ public class CloneScreen extends Screen {
     protected void repositionElements() {
         layout.arrangeElements();
         ralspinWidget.setPosition(width - 60, height - 80);
+        configureButton.setPosition(width - 26, 6);
     }
 }
