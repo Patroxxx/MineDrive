@@ -1,26 +1,26 @@
 {
 	"schemaVersion": 1,
-	"id": "minegit",
+	"id": "minedrive",
 	"version": "${version}",
-	"name": "MineGIT",
-	"description": "Minecraft cloud save system using the power of GitHub!",
+	"name": "MineDrive",
+	"description": "Minecraft cloud save system using the power of Google Drive!\n\n-\n\nFork of ModMonster's MineGIT\n",
 	"authors": [
+		"JustPatrox",
 		"ModMonster"
 	],
 	"contact": {
-		"homepage": "https://youtube.com/modmonster",
-		"sources": "https://github.com/modmonster/MineGIT",
-        "issues": "https://github.com/modmonster/MineGIT/issues"
+		"homepage": "https://youtube.com/justpatrox",
+		"issues": "https://github.com/Patroxxx/MineDrive/issues"
 	},
 	"license": "MIT",
 	"icon": "assets/minegit/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-			"ca.modmonster.minegit.MineGIT"
+			"ca.justpatrox.minedrive.MineDRIVE"
 		],
         "modmenu": [
-            "ca.modmonster.minegit.extra.ModMenuImplementation"
+            "ca.justpatrox.minedrive.extra.ModMenuImplementation"
         ]
 	},
 	"mixins": [
@@ -41,7 +41,9 @@
     "custom": {
         "modmenu": {
             "links": {
-                "modmenu.discord": "https://discord.gg/45tjuM8"
+                "modmenu.discord": "https://discord.gg/DVS2cz6dfx",
+                "modmenu.open_source": "https://github.com/Patroxxx/MineDrive",
+                "modmenu.issues": "https://github.com/Patroxxx/MineDrive/issues"
             }
         }
     }

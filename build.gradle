@@ -22,7 +22,7 @@ repositories {
 
 loom {
 	mods {
-		"minegit" {
+		"minedrive" {
 			sourceSet sourceSets.main
 		}
 	}
@@ -35,10 +35,6 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-    // JGit
-    implementation "org.eclipse.jgit:org.eclipse.jgit:7.6.0.202603022253-r"
-    include "org.eclipse.jgit:org.eclipse.jgit:7.6.0.202603022253-r"
 
     // Mod Menu
 	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
@@ -61,6 +57,10 @@ java {
 	// if it is present.
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
+
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
 
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25

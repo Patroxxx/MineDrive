@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "ca.modmonster.minegit.mixin",
+  "package": "ca.justpatrox.minedrive.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
     "CreateWorldScreenMixin",
