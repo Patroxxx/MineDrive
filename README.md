@@ -4,7 +4,7 @@
 
 The goal of this project is to make cloud saving and synchronization simpler and more accessible for users who already rely on Google Drive for storage and backups. MineDrive keeps the original idea of MineGIT while adapting it to a different platform and workflow.
 
-# Requirements
+# Dependencies
 
 _**Bold** = Required_
 
