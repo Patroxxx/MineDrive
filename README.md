@@ -6,10 +6,9 @@ The goal of this project is to make cloud saving and synchronization simpler and
 
 # Dependencies
 
-_**Bold** = Required_
-
-- **Fabric API**
-- Mod Menu
+- Fabric API
+- Mod Menu (Optional)
+- MineGIT (Incompatible)
 
 # Open Source
 
