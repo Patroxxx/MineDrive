@@ -9,7 +9,7 @@
 		"ModMonster"
 	],
 	"contact": {
-		"homepage": "https://youtube.com/justpatrox",
+		"homepage": "https://github.com/Patroxxx/MineDrive",
 		"issues": "https://github.com/Patroxxx/MineDrive/issues"
 	},
 	"license": "MIT",
@@ -41,8 +41,7 @@
     "custom": {
         "modmenu": {
             "links": {
-                "modmenu.discord": "https://discord.gg/DVS2cz6dfx",
-                "modmenu.open_source": "https://github.com/Patroxxx/MineDrive",
+                "modmenu.discord": "https://discord.gg/HYs4rhPmnm",
                 "modmenu.issues": "https://github.com/Patroxxx/MineDrive/issues"
             }
         }

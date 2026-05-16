@@ -74,6 +74,7 @@ public class AccountLinkScreen extends Screen {
     private void startOAuth() {
         connectButton.active = false;
         statusWidget.setMessage(Component.literal("Opening browser for Google login..."));
+        repositionElements();
 
         new Thread(() -> {
             OAuthManager.AuthResult result = OAuthManager.connectInteractive();
@@ -85,7 +86,7 @@ public class AccountLinkScreen extends Screen {
                     statusWidget.setMessage(Component.literal(result.message));
                 }
                 connectButton.active = true;
-                layout.arrangeElements();
+                repositionElements();
             });
         }, "MineDrive-OAuth").start();
     }
@@ -96,7 +97,7 @@ public class AccountLinkScreen extends Screen {
         ConfigManager.save(config);
         statusWidget.setMessage(Component.literal("Not connected"));
         disconnectButton.active = false;
-        layout.arrangeElements();
+        repositionElements();
     }
 
     @Override
@@ -108,6 +109,12 @@ public class AccountLinkScreen extends Screen {
     @Override
     protected void repositionElements() {
         layout.arrangeElements();
+        centerStatusText();
         ralspinWidget.setPosition(width - 90, height - 95);
+    }
+
+    private void centerStatusText() {
+        if (statusWidget == null) return;
+        statusWidget.setX(this.width / 2 - statusWidget.getWidth() / 2);
     }
 }
