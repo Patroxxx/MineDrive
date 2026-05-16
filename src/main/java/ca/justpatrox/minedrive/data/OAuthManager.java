@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit;
 
 public final class OAuthManager {
     private static final String OAUTH_CONFIG_FILE_NAME = "minedrive-oauth.json";
-    private static final String DEFAULT_PUBLIC_CLIENT_ID = "862359790378-itgg3fcqb1vtl4h5lnkhkkftkqmpmuev.apps.googleusercontent.com";
-    private static final String DEFAULT_PUBLIC_BROKER_BASE_URL = "https://minedrive-oauth-broker.justpatroxcontact.workers.dev";
+    private static final String DEFAULT_PUBLIC_CLIENT_ID = "NOT INCLUDED ON SOURCE CODE";
+    private static final String DEFAULT_PUBLIC_BROKER_BASE_URL = "NOT INCLUDED ON SOURCE CODE";
     private static final String AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
     private static final String DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
