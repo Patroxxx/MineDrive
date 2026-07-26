@@ -44,7 +44,7 @@ public abstract class WorldListEntryMixin {
         if (!GitManager.syncEnabled(minecraft, worldId)) return;
         ci.cancel();
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_pull"));
-        minecraft.setScreen(progressScreen);
+        minecraft.gui.setScreen(progressScreen);
         new Thread(() -> {
             SyncResult status = GitManager.pull(GitManager.getPath(minecraft, worldId), progressScreen);
             GitManager.makeWritable(minecraft, worldId);
@@ -55,7 +55,7 @@ public abstract class WorldListEntryMixin {
                     break;
                 case FAIL_GENERIC:
                     // Generic error; show option to keep local or cloud
-                    minecraft.submit(() -> minecraft.setScreen(new GitConflictScreen(
+                    minecraft.submit(() -> minecraft.gui.setScreen(new GitConflictScreen(
                             this::doLoadWorld,
                             () -> list.returnToScreen(),
                             GitManager.getPath(minecraft, worldId)
@@ -63,7 +63,7 @@ public abstract class WorldListEntryMixin {
                     break;
                 case FAIL_NETWORK:
                     // Network error; show unreachable screen
-                    minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
+                    minecraft.submit(() -> minecraft.gui.setScreen(new TwoChoiceScreen(
                             Component.translatable("minegit.sync.pull_unreachable.title"),
                             Component.translatable("minegit.sync.pull_unreachable.description"),
                             Component.translatable("minegit.sync.pull_unreachable.continue"),

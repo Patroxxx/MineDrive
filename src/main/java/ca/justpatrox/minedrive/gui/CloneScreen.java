@@ -7,6 +7,7 @@ import ca.justpatrox.minedrive.data.NetworkManager;
 import ca.justpatrox.minedrive.data.OAuthManager;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
@@ -89,7 +90,7 @@ public class CloneScreen extends Screen {
                 .build();
         addRenderableWidget(backButton);
 
-        configureButton = Button.builder(Component.literal("☁"), button -> minecraft.setScreen(new AccountLinkScreen(this)))
+        configureButton = Button.builder(Component.literal("☁"), button -> minecraft.gui.setScreen(new AccountLinkScreen(this)))
                 .tooltip(Tooltip.create(Component.translatable("minegit.link.setup.open")))
                 .bounds(6, width - 26, 20, 20)
                 .build();
@@ -111,7 +112,7 @@ public class CloneScreen extends Screen {
         if (selected == null) return;
 
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.clone.in_progress"));
-        minecraft.setScreen(progressScreen);
+        minecraft.gui.setScreen(progressScreen);
         new Thread(() -> {
             int result;
             try {
@@ -123,20 +124,20 @@ public class CloneScreen extends Screen {
 
             minecraft.submit(() -> {
                 if (finalResult == 0) {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.clone.success"), null));
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.clone.success"), null);
                     if (cloneSuccessCallback != null) {
                         cloneSuccessCallback.run();
                     } else {
                         onClose();
                     }
                 } else if (finalResult == 1) {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.clone.error.invalid_remote"), null));
-                    minecraft.setScreen(this);
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.clone.error.invalid_remote"), null);
+                    minecraft.gui.setScreen(this);
                     repositionElements();
                     updateButtonsStatus();
                 } else {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.clone.error.generic"), null));
-                    minecraft.setScreen(this);
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.clone.error.generic"), null);
+                    minecraft.gui.setScreen(this);
                     repositionElements();
                     updateButtonsStatus();
                 }
@@ -215,13 +216,13 @@ public class CloneScreen extends Screen {
     private void askDeleteWorld() {
         NetworkManager.WorldFolderInfo selected = getSelectedWorld();
         if (selected == null) return;
-        minecraft.setScreen(new TwoChoiceScreen(
+        minecraft.gui.setScreen(new TwoChoiceScreen(
                 Component.translatable("minegit.clone.delete.confirm.title"),
                 Component.translatable("minegit.clone.delete.confirm.description", selected.displayName),
                 Component.translatable("minegit.clone.delete.confirm.ok"),
                 Component.translatable("minegit.clone.delete.confirm.cancel"),
                 this::deleteSelectedWorld,
-                () -> minecraft.setScreen(this)
+                () -> minecraft.gui.setScreen(this)
         ));
     }
 
@@ -229,7 +230,7 @@ public class CloneScreen extends Screen {
     private void deleteSelectedWorld() {
         NetworkManager.WorldFolderInfo selected = getSelectedWorld();
         if (selected == null) {
-            minecraft.setScreen(this);
+            minecraft.gui.setScreen(this);
             return;
         }
 
@@ -237,23 +238,23 @@ public class CloneScreen extends Screen {
         updateButtonsStatus();
 
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.clone.delete.in_progress"));
-        minecraft.setScreen(progressScreen);
+        minecraft.gui.setScreen(progressScreen);
         new Thread(() -> {
             Config config = ConfigManager.getCurrentConfig();
             String accessToken = OAuthManager.getValidAccessToken(config);
             boolean ok = !accessToken.isBlank() && NetworkManager.deleteWorldFolder(accessToken, selected.id);
 
             minecraft.submit(() -> {
-                minecraft.setScreen(this);
+                minecraft.gui.setScreen(this);
                 if (ok) {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.clone.delete.success"), null));
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.clone.delete.success"), null);
                     loadWorldsAsync();
                 } else {
                     loadingWorlds = false;
                     statusWidget.setMessage(Component.translatable("minegit.clone.delete.failed"));
                     repositionElements();
                     updateButtonsStatus();
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.clone.delete.failed"), null));
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.clone.delete.failed"), null);
                 }
             });
         }, "MineDrive-DeleteWorld").start();
@@ -271,7 +272,7 @@ public class CloneScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
         if (closeCallback != null) closeCallback.run();
     }
 

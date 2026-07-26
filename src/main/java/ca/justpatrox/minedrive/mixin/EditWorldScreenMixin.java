@@ -39,7 +39,7 @@ public class EditWorldScreenMixin extends Screen {
         if (!GitManager.syncEnabled(minecraft, levelAccess.getLevelId())) return;
 
         // Add prune button
-        layout.addChild(Button.builder(Component.translatable("minegit.prune.button"), button -> minecraft.setScreen(new PruneWorldScreen(this, levelAccess, callback))).width(200).build());
+        layout.addChild(Button.builder(Component.translatable("minegit.prune.button"), button -> minecraft.gui.setScreen(new PruneWorldScreen(this, levelAccess, callback))).width(200).build());
         layout.visitWidgets(this::addRenderableWidget);
     }
 }
