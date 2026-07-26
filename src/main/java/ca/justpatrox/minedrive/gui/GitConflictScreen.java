@@ -56,18 +56,18 @@ public class GitConflictScreen extends Screen {
         // Remote button
         Button remoteButton = Button.builder(Component.translatable("minegit.sync.conflict.remote").append(" - " + remoteCommitDate), button -> {
             GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_pull"));
-            minecraft.setScreen(progressScreen);
+            minecraft.gui.setScreen(progressScreen);
             new Thread(() -> {
                 boolean ok = GitManager.forcePull(worldFolder, progressScreen) == SyncResult.SUCCESS;
                 if (ok) {
                     minecraft.submit(resolvedCallback);
                 } else {
                     minecraft.submit(() -> {
-                        minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.conflict.failed"), null));
+                        SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.sync.conflict.failed"), null);
                         if (cancelCallback != null) {
                             cancelCallback.run();
                         } else {
-                            minecraft.setScreen(null);
+                            minecraft.gui.setScreen(null);
                         }
                     });
                 }
@@ -78,18 +78,18 @@ public class GitConflictScreen extends Screen {
         // Local button
         Button localButton = Button.builder(Component.translatable("minegit.sync.conflict.local").append(" - " + localCommitDate), button -> {
             GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_push"));
-            minecraft.setScreen(progressScreen);
+            minecraft.gui.setScreen(progressScreen);
             new Thread(() -> {
                 boolean ok = GitManager.forcePush(worldFolder, progressScreen) == SyncResult.SUCCESS;
                 if (ok) {
                     minecraft.submit(resolvedCallback);
                 } else {
                     minecraft.submit(() -> {
-                        minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.conflict.failed"), null));
+                        SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.sync.conflict.failed"), null);
                         if (cancelCallback != null) {
                             cancelCallback.run();
                         } else {
-                            minecraft.setScreen(null);
+                            minecraft.gui.setScreen(null);
                         }
                     });
                 }

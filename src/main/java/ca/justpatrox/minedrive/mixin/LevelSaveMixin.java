@@ -51,31 +51,31 @@ public class LevelSaveMixin {
     private void doWorldSave(Path worldFolder) {
         minecraft.submit(() -> {
             GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_push"));
-            minecraft.setScreen(progressScreen);
+            minecraft.gui.setScreen(progressScreen);
             new Thread(() -> {
                 SyncResult status = GitManager.push(worldFolder, progressScreen);
                 switch (status) {
                     case SUCCESS:
                         // Success; quit as normal
-                        minecraft.submit(() -> minecraft.setScreen(null));
+                        minecraft.submit(() -> minecraft.gui.setScreen(null));
                         break;
                     case FAIL_GENERIC:
                         // Generic error; show option to keep local or cloud
-                        minecraft.submit(() -> minecraft.setScreen(new GitConflictScreen(
-                                () -> minecraft.setScreen(null),
+                        minecraft.submit(() -> minecraft.gui.setScreen(new GitConflictScreen(
+                                () -> minecraft.gui.setScreen(null),
                                 null,
                                 worldFolder
                         )));
                         break;
                     case FAIL_NETWORK:
                         // Network error; show unreachable screen
-                        minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
+                        minecraft.submit(() -> minecraft.gui.setScreen(new TwoChoiceScreen(
                                 Component.translatable("minegit.sync.push_unreachable.title"),
                                 Component.translatable("minegit.sync.push_unreachable.description"),
                                 Component.translatable("minegit.sync.push_unreachable.retry"),
                                 Component.translatable("minegit.sync.push_unreachable.exit"),
                                 () -> doWorldSave(worldFolder),
-                                () -> minecraft.setScreen(null)
+                                () -> minecraft.gui.setScreen(null)
                         )));
                         break;
                 }

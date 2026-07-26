@@ -55,11 +55,11 @@ public abstract class CreateWorldScreenMixin extends Screen {
     @Unique
     void onGitButtonPress(Button gitButton) {
         if (needsSetup) {
-            this.minecraft.setScreen(new AccountLinkScreen(this, this::updateSetupButton));
+            this.minecraft.gui.setScreen(new AccountLinkScreen(this, this::updateSetupButton));
         } else {
-            this.minecraft.setScreen(
+            this.minecraft.gui.setScreen(
                     new CloneScreen(this, null, () ->
-                            minecraft.setScreen(new SelectWorldScreen(null))));
+                            minecraft.gui.setScreen(new SelectWorldScreen(null))));
         }
     }
 

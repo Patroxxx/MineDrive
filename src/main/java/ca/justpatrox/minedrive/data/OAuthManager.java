@@ -52,7 +52,7 @@ public final class OAuthManager {
             String redirectUri = "http://127.0.0.1:" + port + "/oauth2callback";
             ArrayBlockingQueue<OAuthCallback> queue = new ArrayBlockingQueue<>(1);
 
-            callbackServer.createContext("/oauth2callback", exchange -> handleCallback(exchange, queue));
+            callbackServer.createContext("/oauth2callback", exchange -> handleCallback(exchange, queue, callbackServer));
             callbackServer.start();
 
             String authUrl = AUTH_ENDPOINT
@@ -201,7 +201,7 @@ public final class OAuthManager {
         return tr;
     }
 
-    private static void handleCallback(HttpExchange exchange, ArrayBlockingQueue<OAuthCallback> queue) throws IOException {
+    private static void handleCallback(HttpExchange exchange, ArrayBlockingQueue<OAuthCallback> queue, HttpServer server) throws IOException {
         String query = exchange.getRequestURI().getRawQuery();
         String code = null;
         String error = null;
@@ -219,8 +219,8 @@ public final class OAuthManager {
         OAuthCallback callback = new OAuthCallback();
         callback.code = code;
         callback.error = error;
-        queue.offer(callback);
 
+        // Send response first so the browser gets the nice HTML message
         String html = "<html><body><h2>MineDrive connected.</h2><p>You can close this tab and return to Minecraft.</p></body></html>";
         byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
@@ -228,6 +228,16 @@ public final class OAuthManager {
         try (OutputStream os = exchange.getResponseBody()) {
             os.write(bytes);
         }
+
+        // Push to queue and gracefully stop the server after a short delay
+        queue.offer(callback);
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(500); // Give the browser time to render
+            } catch (InterruptedException ignored) {}
+            server.stop(0);
+        }).start();
     }
 
     private static String generateCodeVerifier() {
@@ -276,15 +286,15 @@ public final class OAuthManager {
         JsonObject root = JsonParser.parseString(Files.readString(oauthConfigPath)).getAsJsonObject();
         String clientId = root.has("clientId") ? root.get("clientId").getAsString().trim() : DEFAULT_PUBLIC_CLIENT_ID;
         String clientSecret = root.has("clientSecret") ? root.get("clientSecret").getAsString().trim() : "";
-        String brokerBaseUrl = root.has("brokerBaseUrl") ? root.get("brokerBaseUrl").getAsString().trim() : DEFAULT_PUBLIC_BROKER_BASE_URL;
+        String brokerBaseUrl = root.has("brokerBaseUrl") ? root.get("brokerBaseUrl").getAsString().trim() : "";
         int redirectPort = root.has("redirectPort") ? root.get("redirectPort").getAsInt() : DEFAULT_LOOPBACK_PORT;
 
         if (clientId.isBlank() || clientId.contains("REPLACE_WITH")) {
             clientId = DEFAULT_PUBLIC_CLIENT_ID;
         }
-        if (brokerBaseUrl.isBlank() || brokerBaseUrl.contains("REPLACE_WITH")) {
+        /*if (brokerBaseUrl.isBlank() || brokerBaseUrl.contains("REPLACE_WITH")) {
             brokerBaseUrl = DEFAULT_PUBLIC_BROKER_BASE_URL;
-        }
+        }*/
         if (clientId.isBlank()) {
             throw new IOException("OAuth clientId missing in " + oauthConfigPath);
         }

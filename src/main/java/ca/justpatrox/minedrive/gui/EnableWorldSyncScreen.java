@@ -49,7 +49,7 @@ public class EnableWorldSyncScreen extends Screen {
         cancelButton = Button.builder(Component.translatable("minegit.sync.enable.confirm.cancel"), button -> onClose()).build();
         buttonRowLayout.addChild(cancelButton);
 
-        openSetupButton = Button.builder(Component.translatable("minegit.link.setup.open"), button -> minecraft.setScreen(new AccountLinkScreen(this.parent, closeCallback))).build();
+        openSetupButton = Button.builder(Component.translatable("minegit.link.setup.open"), button -> minecraft.gui.setScreen(new AccountLinkScreen(this.parent, closeCallback))).build();
         openSetupButton.visible = false;
         columnLayout.addChild(openSetupButton);
 
@@ -63,17 +63,17 @@ public class EnableWorldSyncScreen extends Screen {
         cancelButton.active = false;
 
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.enable.working"));
-        minecraft.setScreen(progressScreen);
+        minecraft.gui.setScreen(progressScreen);
 
         new Thread(() -> {
             Config config = ConfigManager.getCurrentConfig();
             String accessToken = OAuthManager.getValidAccessToken(config);
             if (accessToken.isBlank()) {
                 minecraft.submit(() -> {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.literal("Google login required. Open Cloud Sync Setup."), null));
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.literal("Google login required. Open Cloud Sync Setup."), null);
                     openSetupButton.visible = true;
                     cancelButton.active = true;
-                    minecraft.setScreen(this);
+                    minecraft.gui.setScreen(this);
                 });
                 return;
             }
@@ -82,10 +82,10 @@ public class EnableWorldSyncScreen extends Screen {
             String folderId = NetworkManager.createWorldFolder(accessToken, level.getLevelId(), level.getLevelName());
             if (folderId == null) {
                 minecraft.submit(() -> {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.create_repo.error", -1), null));
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.create_repo.error", -1), null);
                     openSetupButton.visible = true;
                     cancelButton.active = true;
-                    minecraft.setScreen(this);
+                    minecraft.gui.setScreen(this);
                 });
                 return;
             }
@@ -94,15 +94,15 @@ public class EnableWorldSyncScreen extends Screen {
             boolean ok = GitManager.init(minecraft, level.getLevelId(), folderId, progressScreen);
             if (!ok) {
                 minecraft.submit(() -> {
-                    minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.git_init.error"), null));
-                    minecraft.setScreen(this);
+                    SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.git_init.error"), null);
+                    minecraft.gui.setScreen(this);
                     cancelButton.active = true;
                 });
                 return;
             }
 
             minecraft.submit(() -> {
-                minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.complete"), null));
+                SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.sync.enable.complete"), null);
                 onClose();
             });
         }).start();
@@ -110,7 +110,7 @@ public class EnableWorldSyncScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
         if (closeCallback != null) closeCallback.run();
     }
 

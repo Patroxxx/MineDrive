@@ -68,9 +68,9 @@ public class PruneWorldScreen extends Screen {
         String worldId = levelAccess.getLevelId();
         boolean ok = GitManager.prune(minecraft, worldId, progress);
         if (ok) {
-            minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.complete"), null));
+            SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.prune.complete"), null);
         } else {
-            minecraft.getToastManager().addToast(new SystemToast(new SystemToast.SystemToastId(), Component.translatable("minegit.prune.failed"), null));
+            SystemToast.add(minecraft.gui.toastManager(), new SystemToast.SystemToastId(), Component.translatable("minegit.prune.failed"), null);
         }
         minecraft.submit(() -> this.callback.accept(true));
     }
@@ -81,7 +81,7 @@ public class PruneWorldScreen extends Screen {
         String worldId = levelAccess.getLevelId();
 
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.prune.in_progress"));
-        minecraft.setScreen(progressScreen);
+        minecraft.gui.setScreen(progressScreen);
         new Thread(() -> {
             SyncResult status = GitManager.pull(GitManager.getPath(minecraft, worldId), progressScreen);
             GitManager.makeWritable(minecraft, worldId);
@@ -92,7 +92,7 @@ public class PruneWorldScreen extends Screen {
                     break;
                 case FAIL_GENERIC:
                     // Generic error; show option to keep local or cloud
-                    minecraft.submit(() -> minecraft.setScreen(new GitConflictScreen(
+                    minecraft.submit(() -> minecraft.gui.setScreen(new GitConflictScreen(
                             () -> doPrune(progressScreen),
                             this::onClose,
                             GitManager.getPath(minecraft, worldId)
@@ -100,7 +100,7 @@ public class PruneWorldScreen extends Screen {
                     break;
                 case FAIL_NETWORK:
                     // Network error; show unreachable screen
-                    minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
+                    minecraft.submit(() -> minecraft.gui.setScreen(new TwoChoiceScreen(
                             Component.translatable("minegit.sync.pull_unreachable.title"),
                             Component.translatable("minegit.sync.pull_unreachable.description"),
                             Component.translatable("minegit.sync.pull_unreachable.continue"),
@@ -121,6 +121,6 @@ public class PruneWorldScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 }

@@ -27,7 +27,7 @@ public class QuickPlayMixin {
         if (!GitManager.syncEnabled(minecraft, identifier)) return;
         ci.cancel();
         GitProgressScreen progressScreen = new GitProgressScreen(Component.translatable("minegit.sync.status.git_pull"));
-        minecraft.setScreen(progressScreen);
+        minecraft.gui.setScreen(progressScreen);
         new Thread(() -> {
             SyncResult status = GitManager.pull(GitManager.getPath(minecraft, identifier), progressScreen);
             GitManager.makeWritable(minecraft, identifier);
@@ -38,7 +38,7 @@ public class QuickPlayMixin {
                     break;
                 case FAIL_GENERIC:
                     // Generic error; show option to keep local or cloud
-                    minecraft.submit(() -> minecraft.setScreen(new GitConflictScreen(
+                    minecraft.submit(() -> minecraft.gui.setScreen(new GitConflictScreen(
                             () -> doLoadWorld(minecraft, identifier),
                             () -> dontLoadWorld(minecraft),
                             GitManager.getPath(minecraft, identifier)
@@ -46,7 +46,7 @@ public class QuickPlayMixin {
                     break;
                 case FAIL_NETWORK:
                     // Network error; show unreachable screen
-                    minecraft.submit(() -> minecraft.setScreen(new TwoChoiceScreen(
+                    minecraft.submit(() -> minecraft.gui.setScreen(new TwoChoiceScreen(
                             Component.translatable("minegit.sync.pull_unreachable.title"),
                             Component.translatable("minegit.sync.pull_unreachable.description"),
                             Component.translatable("minegit.sync.pull_unreachable.continue"),
@@ -62,11 +62,11 @@ public class QuickPlayMixin {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Unique
     private static void doLoadWorld(final Minecraft minecraft, final String identifier) {
-        minecraft.submit(() -> minecraft.createWorldOpenFlows().openWorld(identifier, () -> minecraft.setScreen(new TitleScreen())));
+        minecraft.submit(() -> minecraft.createWorldOpenFlows().openWorld(identifier, () -> minecraft.gui.setScreen(new TitleScreen())));
     }
 
     @Unique
     private static void dontLoadWorld(final Minecraft minecraft) {
-        minecraft.setScreen(new SelectWorldScreen(new TitleScreen()));
+        minecraft.gui.setScreen(new SelectWorldScreen(new TitleScreen()));
     }
 }
