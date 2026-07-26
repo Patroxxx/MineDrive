@@ -3,7 +3,7 @@
 	"id": "minedrive",
 	"version": "${version}",
 	"name": "MineDrive",
-	"description": "Minecraft cloud save system using the power of Google Drive!\n\n-\n\nFork of ModMonster's MineGIT\n",
+	"description": "Minecraft cloud save system using the power of Google Drive!\n\n-\n\nFork of ModMonster's MineGIT\n\nSpecial Thanks to ABU008\n",
 	"authors": [
 		"JustPatrox",
 		"ModMonster"

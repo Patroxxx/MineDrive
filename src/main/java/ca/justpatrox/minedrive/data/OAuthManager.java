@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import net.fabricmc.loader.api.FabricLoader;
 
 import java.awt.Desktop;
 import java.io.IOException;
@@ -17,8 +16,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -28,11 +25,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public final class OAuthManager {
-    private static final String OAUTH_CONFIG_FILE_NAME = "minedrive-oauth.json";
-    private static final String DEFAULT_PUBLIC_CLIENT_ID = "NOT INCLUDED ON SOURCE CODE";
-    private static final String DEFAULT_PUBLIC_BROKER_BASE_URL = "NOT INCLUDED ON SOURCE CODE";
+    private static final String DEFAULT_PUBLIC_CLIENT_ID = "862359790378-itgg3fcqb1vtl4h5lnkhkkftkqmpmuev.apps.googleusercontent.com";
+    private static final String DEFAULT_PUBLIC_BROKER_BASE_URL = "https://minedrive-oauth-broker.justpatroxcontact.workers.dev";
     private static final String AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
-    private static final String TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
     private static final String DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
     private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(20);
     private static final int DEFAULT_LOOPBACK_PORT = 53682;
@@ -43,7 +38,7 @@ public final class OAuthManager {
 
     public static AuthResult connectInteractive() {
         try {
-            OAuthClientCredentials credentials = loadOAuthClientCredentials();
+            OAuthClientCredentials credentials = defaultOAuthClientCredentials();
             String codeVerifier = generateCodeVerifier();
             String codeChallenge = generateCodeChallenge(codeVerifier);
 
@@ -119,67 +114,16 @@ public final class OAuthManager {
     }
 
     private static TokenResponse exchangeAuthorizationCode(String code, String codeVerifier, String redirectUri, OAuthClientCredentials credentials) throws IOException, InterruptedException {
-        if (!credentials.brokerBaseUrl.isBlank()) {
-            TokenResponse viaBroker = exchangeAuthorizationCodeViaBroker(code, codeVerifier, redirectUri, credentials);
-            if (viaBroker == null || viaBroker.accessToken == null || viaBroker.accessToken.isBlank()) {
-                throw new RuntimeException("Token exchange via broker failed.");
-            }
-            return viaBroker;
+        TokenResponse viaBroker = exchangeAuthorizationCodeViaBroker(code, codeVerifier, redirectUri, credentials);
+        if (viaBroker == null || viaBroker.accessToken == null || viaBroker.accessToken.isBlank()) {
+            throw new RuntimeException("Token exchange via broker failed.");
         }
-
-        String body = "client_id=" + enc(credentials.clientId)
-                + "&code=" + enc(code)
-                + "&code_verifier=" + enc(codeVerifier)
-                + "&grant_type=authorization_code"
-                + "&redirect_uri=" + enc(redirectUri);
-        if (!credentials.clientSecret.isBlank()) {
-            body += "&client_secret=" + enc(credentials.clientSecret);
-        }
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(TOKEN_ENDPOINT))
-                .timeout(HTTP_TIMEOUT)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
-
-        HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            MineDRIVE.LOGGER.error("OAuth token exchange failed: {} {}", response.statusCode(), response.body());
-            throw new RuntimeException("Token exchange failed (" + response.statusCode() + "): " + compactError(response.body()));
-        }
-
-        return parseTokenResponse(response.body());
+        return viaBroker;
     }
 
     private static TokenResponse refreshAccessToken(String refreshToken) {
         try {
-            OAuthClientCredentials credentials = loadOAuthClientCredentials();
-            if (!credentials.brokerBaseUrl.isBlank()) {
-                return refreshAccessTokenViaBroker(refreshToken, credentials);
-            }
-
-            String body = "client_id=" + enc(credentials.clientId)
-                    + "&refresh_token=" + enc(refreshToken)
-                    + "&grant_type=refresh_token";
-            if (!credentials.clientSecret.isBlank()) {
-                body += "&client_secret=" + enc(credentials.clientSecret);
-            }
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(TOKEN_ENDPOINT))
-                    .timeout(HTTP_TIMEOUT)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-
-            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                MineDRIVE.LOGGER.error("OAuth token refresh failed: {} {}", response.statusCode(), response.body());
-                return null;
-            }
-
-            return parseTokenResponse(response.body());
+            return refreshAccessTokenViaBroker(refreshToken, defaultOAuthClientCredentials());
         } catch (Exception e) {
             MineDRIVE.LOGGER.error("OAuth token refresh failed", e);
             return null;
@@ -221,7 +165,25 @@ public final class OAuthManager {
         callback.error = error;
 
         // Send response first so the browser gets the nice HTML message
-        String html = "<html><body><h2>MineDrive connected.</h2><p>You can close this tab and return to Minecraft.</p></body></html>";
+        String html = "<html>"
+                + "<head>"
+                + "<meta charset=\"UTF-8\">"
+                + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+                + "<style>"
+                + "  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }"
+                + "  .card { background-color: #171717; padding: 2.5rem; border-radius: 0.75rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); text-align: center; max-width: 400px; border: 1px solid #262626; }"
+                + "  h2 { color: #ffffff; margin-top: 0; margin-bottom: 0.75rem; font-size: 1.5rem; font-weight: 600; letter-spacing: -0.025em; }"
+                + "  p { color: #a3a3a3; margin: 0; font-size: 0.95rem; line-height: 1.5; }"
+                + "</style>"
+                + "</head>"
+                + "<body>"
+                + "  <div class=\"card\">"
+                + "    <h2>MineDrive Connected</h2>"
+                + "    <p>You can close this tab and return to Minecraft.</p>"
+                + "  </div>"
+                + "</body>"
+                + "</html>";
+
         byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
         exchange.sendResponseHeaders(200, bytes.length);
@@ -275,55 +237,8 @@ public final class OAuthManager {
         return responseBody;
     }
 
-    private static OAuthClientCredentials loadOAuthClientCredentials() throws IOException {
-        Path oauthConfigPath = FabricLoader.getInstance().getConfigDir().resolve(OAUTH_CONFIG_FILE_NAME);
-        if (!Files.exists(oauthConfigPath)) {
-            writeOAuthTemplate(oauthConfigPath);
-            MineDRIVE.LOGGER.info("OAuth config not found. Using built-in public broker defaults. Optional override file created at {}", oauthConfigPath);
-            return new OAuthClientCredentials(DEFAULT_PUBLIC_CLIENT_ID, "", DEFAULT_PUBLIC_BROKER_BASE_URL, DEFAULT_LOOPBACK_PORT);
-        }
-
-        JsonObject root = JsonParser.parseString(Files.readString(oauthConfigPath)).getAsJsonObject();
-        String clientId = root.has("clientId") ? root.get("clientId").getAsString().trim() : DEFAULT_PUBLIC_CLIENT_ID;
-        String clientSecret = root.has("clientSecret") ? root.get("clientSecret").getAsString().trim() : "";
-        String brokerBaseUrl = root.has("brokerBaseUrl") ? root.get("brokerBaseUrl").getAsString().trim() : "";
-        int redirectPort = root.has("redirectPort") ? root.get("redirectPort").getAsInt() : DEFAULT_LOOPBACK_PORT;
-
-        if (clientId.isBlank() || clientId.contains("REPLACE_WITH")) {
-            clientId = DEFAULT_PUBLIC_CLIENT_ID;
-        }
-        /*if (brokerBaseUrl.isBlank() || brokerBaseUrl.contains("REPLACE_WITH")) {
-            brokerBaseUrl = DEFAULT_PUBLIC_BROKER_BASE_URL;
-        }*/
-        if (clientId.isBlank()) {
-            throw new IOException("OAuth clientId missing in " + oauthConfigPath);
-        }
-        if (clientSecret.contains("REPLACE_WITH")) {
-            clientSecret = "";
-        }
-        if (redirectPort <= 0 || redirectPort > 65535) {
-            throw new IOException("OAuth redirectPort invalid in " + oauthConfigPath);
-        }
-        if (!brokerBaseUrl.isBlank() && !brokerBaseUrl.startsWith("https://")) {
-            throw new IOException("OAuth brokerBaseUrl must start with https:// in " + oauthConfigPath);
-        }
-
-        if (brokerBaseUrl.isBlank() && clientSecret.isBlank()) {
-            throw new IOException("Either clientSecret or brokerBaseUrl must be configured in " + oauthConfigPath);
-        }
-
-        return new OAuthClientCredentials(clientId, clientSecret, brokerBaseUrl, redirectPort);
-    }
-
-    private static void writeOAuthTemplate(Path oauthConfigPath) throws IOException {
-        JsonObject template = new JsonObject();
-        template.addProperty("clientId", DEFAULT_PUBLIC_CLIENT_ID);
-        template.addProperty("clientSecret", "");
-        template.addProperty("brokerBaseUrl", DEFAULT_PUBLIC_BROKER_BASE_URL);
-        template.addProperty("redirectPort", DEFAULT_LOOPBACK_PORT);
-
-        Files.createDirectories(oauthConfigPath.getParent());
-        Files.writeString(oauthConfigPath, template.toString() + System.lineSeparator(), StandardCharsets.UTF_8);
+    private static OAuthClientCredentials defaultOAuthClientCredentials() {
+        return new OAuthClientCredentials(DEFAULT_PUBLIC_CLIENT_ID, DEFAULT_PUBLIC_BROKER_BASE_URL, DEFAULT_LOOPBACK_PORT);
     }
 
     private static boolean openAuthUrl(String authUrl) {
@@ -449,14 +364,12 @@ public final class OAuthManager {
 
     private static final class OAuthClientCredentials {
         final String clientId;
-        final String clientSecret;
         final String brokerBaseUrl;
         final int redirectPort;
 
-        private OAuthClientCredentials(String clientId, String clientSecret, String brokerBaseUrl, int redirectPort) {
+        private OAuthClientCredentials(String clientId, String brokerBaseUrl, int redirectPort) {
             this.clientId = clientId;
-            this.clientSecret = clientSecret;
-            this.brokerBaseUrl = brokerBaseUrl == null ? "" : brokerBaseUrl;
+            this.brokerBaseUrl = brokerBaseUrl;
             this.redirectPort = redirectPort;
         }
     }
